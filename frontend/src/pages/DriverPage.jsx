@@ -12,10 +12,11 @@ import { capacityStatus } from '../lib/constants.js';
 const USE_MOCK_CHECK =
   import.meta.env.VITE_USE_MOCK === 'true' || !import.meta.env.VITE_API_URL;
 
-const USE_MOCK =
-  import.meta.env.VITE_USE_MOCK === 'true' || !import.meta.env.VITE_API_URL;
-const TRUCK_ID =
-  import.meta.env.VITE_DRIVER_TRUCK_ID || (USE_MOCK ? 'tr-B' : '1');
+const getTruckId = () => {
+  const mockMode = import.meta.env.VITE_USE_MOCK === 'true' || !import.meta.env.VITE_API_URL;
+  if (mockMode) return import.meta.env.VITE_DRIVER_TRUCK_ID || 'tr-B';
+  return localStorage.getItem('wh_truck_id') || import.meta.env.VITE_DRIVER_TRUCK_ID || '1';
+};
 
 export default function DriverPage({ onLogout }) {
   const [tab, setTab] = useState('list');
@@ -29,14 +30,15 @@ export default function DriverPage({ onLogout }) {
   useEffect(() => { refresh(); }, []);
 
   async function refresh() {
+    const truckId = getTruckId();
     const [list, allTrucks, shiftData] = await Promise.all([
-      api.listTasks(TRUCK_ID),
+      api.listTasks(truckId),
       api.listTrucks(),
-      api.getShiftSummary(TRUCK_ID),
+      api.getShiftSummary(truckId),
     ]);
     setTasks(list);
     setShift(shiftData);
-    const me = allTrucks.find((t) => String(t.id) === String(TRUCK_ID));
+    const me = allTrucks.find((t) => String(t.id) === String(truckId));
     setTruck(me);
     const active = list.find((t) => t.status === 'active');
     if (active && !activeId) {
@@ -54,12 +56,18 @@ export default function DriverPage({ onLogout }) {
     setTab('task');
   }
 
-  async function onMarkDone() { setStep('weight'); }
+  async function onMarkDone() {
+    if (activeTask) {
+      setWeight(activeTask.estimated_weight_kg || 0);
+    }
+    setStep('weight');
+  }
   async function onMarkUnreachable() {
     // Snap truck to this task's location so next ETA is computed from here
     const t = tasks.find((x) => x.id === activeId);
+    const truckId = getTruckId();
     if (!USE_MOCK_CHECK && t?.lat != null) {
-      await api.updateTruckLocation(TRUCK_ID, t.lat, t.lng).catch(() => {});
+      await api.updateTruckLocation(truckId, t.lat, t.lng).catch(() => {});
     }
     await api.patchTask(activeId, { status: 'unreachable' });
     setStep('unreachable');
@@ -69,8 +77,9 @@ export default function DriverPage({ onLogout }) {
     // Snap truck position to the just-completed waste point so the next task
     // gets accurate distance/ETA calculations from backend
     const t = tasks.find((x) => x.id === activeId);
+    const truckId = getTruckId();
     if (!USE_MOCK_CHECK && t?.lat != null) {
-      await api.updateTruckLocation(TRUCK_ID, t.lat, t.lng).catch(() => {});
+      await api.updateTruckLocation(truckId, t.lat, t.lng).catch(() => {});
     }
     await api.patchTask(activeId, { status: 'done', weight_collected_kg: weight });
     setStep('completed');

@@ -334,10 +334,16 @@ function triggerDownload(blob, filename) {
 export async function register(username, password, role = 'driver') {
   if (USE_MOCK) {
     setToken('mock-token');
-    return { token: 'mock-token', role, truck_id: null };
+    localStorage.setItem('wh_role', role);
+    localStorage.setItem('wh_truck_id', 'tr-B');
+    return { token: 'mock-token', role, truck_id: 'tr-B' };
   }
   const res = await http('POST', '/api/auth/register', { username, password, role });
-  if (res?.token) setToken(res.token);
+  if (res?.token) {
+    setToken(res.token);
+    localStorage.setItem('wh_role', res.role || '');
+    localStorage.setItem('wh_truck_id', res.truck_id != null ? String(res.truck_id) : '');
+  }
   return res;
 }
 
@@ -345,14 +351,22 @@ export async function login(username, password) {
   if (USE_MOCK) {
     const res = await mock.mockLogin(username, password);
     setToken(res.token);
+    localStorage.setItem('wh_role', res.role || '');
+    localStorage.setItem('wh_truck_id', res.truck_id != null ? String(res.truck_id) : '');
     return res;
   }
   const res = await http('POST', '/api/auth/login', { username, password });
-  if (res?.token) setToken(res.token);
+  if (res?.token) {
+    setToken(res.token);
+    localStorage.setItem('wh_role', res.role || '');
+    localStorage.setItem('wh_truck_id', res.truck_id != null ? String(res.truck_id) : '');
+  }
   return res;
 }
 export function logout() {
   setToken(null);
+  localStorage.removeItem('wh_role');
+  localStorage.removeItem('wh_truck_id');
 }
 
 export const META = { BASE_URL, USE_MOCK };

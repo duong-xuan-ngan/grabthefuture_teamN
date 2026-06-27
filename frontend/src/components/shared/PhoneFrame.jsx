@@ -3,14 +3,11 @@ export default function PhoneFrame({ children }) {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center py-8 px-4"
-      style={{
-        background: 'linear-gradient(135deg, #00212F 0%, #003a52 50%, #00212F 100%)',
-      }}
+      className="min-h-[100dvh] sm:min-h-screen flex items-center justify-center sm:py-8 sm:px-4 bg-white sm:bg-[linear-gradient(135deg,#00212F_0%,#003a52_50%,#00212F_100%)]"
     >
       {/* Dot-grid overlay */}
       <div
-        className="fixed inset-0 pointer-events-none"
+        className="fixed inset-0 pointer-events-none hidden sm:block"
         style={{
           backgroundImage: 'radial-gradient(circle, rgba(0,177,79,0.06) 1px, transparent 1px)',
           backgroundSize: '32px 32px',
@@ -18,7 +15,7 @@ export default function PhoneFrame({ children }) {
       />
 
       {/* Brand watermark */}
-      <div className="fixed top-6 left-8 flex items-center gap-2.5 pointer-events-none select-none">
+      <div className="fixed top-6 left-8 flex items-center gap-2.5 pointer-events-none select-none hidden sm:flex">
         <div className="w-7 h-7 rounded-btn flex items-center justify-center" style={{ background: '#00B14F' }}>
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
             <path d="M8 2L14 5.5V10.5L8 14L2 10.5V5.5L8 2Z" fill="white" />
@@ -31,19 +28,14 @@ export default function PhoneFrame({ children }) {
 
       {/* Phone shell */}
       <div
-        className="relative flex flex-col overflow-hidden"
+        className="relative flex flex-col overflow-hidden w-full h-[100dvh] sm:w-[390px] sm:h-[844px] sm:rounded-[44px] sm:shadow-[0_0_0_10px_#1a3a4a,0_0_0_12px_#0f2530,0_40px_80px_rgba(0,0,0,0.6),0_8px_24px_rgba(0,0,0,0.4)]"
         style={{
-          width: '390px',
-          height: '844px',
-          borderRadius: '44px',
           background: '#ffffff',
-          boxShadow:
-            '0 0 0 10px #1a3a4a, 0 0 0 12px #0f2530, 0 40px 80px rgba(0,0,0,0.6), 0 8px 24px rgba(0,0,0,0.4)',
         }}
       >
         {/* Status bar */}
         <div
-          className="flex-shrink-0 flex items-center justify-between px-7"
+          className="flex-shrink-0 hidden sm:flex items-center justify-between px-7"
           style={{ background: '#00212F', height: '44px' }}
         >
           <span className="text-[11px] font-semibold num" style={{ color: 'rgba(255,255,255,0.7)' }}>
@@ -70,7 +62,7 @@ export default function PhoneFrame({ children }) {
         </div>
 
         {/* Home indicator */}
-        <div className="flex-shrink-0 flex justify-center py-2" style={{ background: '#ffffff' }}>
+        <div className="flex-shrink-0 hidden sm:flex justify-center py-2" style={{ background: '#ffffff' }}>
           <div className="w-32 h-1 rounded-full" style={{ background: 'rgba(0,0,0,0.15)' }} />
         </div>
       </div>

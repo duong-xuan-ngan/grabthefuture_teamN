@@ -9,6 +9,8 @@ from app.models import Task, TaskStatus, Truck, Hotspot, HotspotStatus, WastePoi
 from app.services.capacity import update_truck_status
 from app.services.clustering import reset_waste_point_status
 from app.utils.serialize import task_view
+from app.routes.routing import _reorder_truck_route, _materialize_route_segments
+from app.services.routing import run_routing_engine
 
 router = APIRouter()
 
@@ -140,16 +142,30 @@ def update_task(task_id: int, body: TaskUpdateBody, session: Session = Depends(g
 
     task.status = body.status
 
+    # Get related truck, hotspot, and waste point
+    truck = session.get(Truck, task.truck_id)
+    hotspot = session.get(Hotspot, task.hotspot_id)
+    wp = session.get(WastePoint, hotspot.waste_point_id) if hotspot and hotspot.waste_point_id else None
+
+    # Task 2: If task is completed (done) or unreachable, update truck location to the waste point
+    if body.status in (TaskStatus.done, TaskStatus.unreachable):
+        if truck and wp:
+            truck.lat = wp.lat
+            truck.lng = wp.lng
+            truck.h3_cell = wp.h3_cell
+            session.add(truck)
+            session.commit()
+            session.refresh(truck)
+
     if body.status == TaskStatus.done:
         task.completed_at = datetime.utcnow()
         if body.weight_collected_kg is not None:
             task.weight_collected_kg = body.weight_collected_kg
-            truck = session.get(Truck, task.truck_id)
             if truck:
                 truck.current_load_kg += body.weight_collected_kg
+                # update_truck_status will commit & refresh truck internally
                 update_truck_status(truck, session)
 
-        hotspot = session.get(Hotspot, task.hotspot_id)
         if hotspot:
             hotspot.status = HotspotStatus.resolved
             hotspot.resolved_at = datetime.utcnow()
@@ -159,4 +175,20 @@ def update_task(task_id: int, body: TaskUpdateBody, session: Session = Depends(g
     session.add(task)
     session.commit()
     session.refresh(task)
+
+    # Task 3: Reorder remaining stops and materialize route segments for the truck
+    if truck:
+        try:
+            order = _reorder_truck_route(truck, session)
+            _materialize_route_segments(truck, order, session)
+        except Exception as e:
+            # Prevent failures from breaking the main response
+            print(f"Error reordering truck route: {e}")
+
+    # Task 3: Trigger routing engine re-run after DB commit
+    try:
+        run_routing_engine(session)
+    except Exception as e:
+        print(f"Error running routing engine: {e}")
+
     return task

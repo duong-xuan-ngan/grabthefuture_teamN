@@ -20,6 +20,7 @@ def can_accept(truck: Truck, estimated_weight_kg: float) -> bool:
 
 
 def update_truck_status(truck: Truck, session: Session) -> Truck:
+    old_status = truck.status
     pct = capacity_pct(truck)
     if pct >= CAPACITY_FULL_PCT:
         truck.status = TruckStatus.full
@@ -30,4 +31,13 @@ def update_truck_status(truck: Truck, session: Session) -> Truck:
     session.add(truck)
     session.commit()
     session.refresh(truck)
+
+    # Task 4: Trigger routing engine re-run if capacity status changes
+    if old_status != truck.status:
+        try:
+            from app.services.routing import run_routing_engine
+            run_routing_engine(session)
+        except Exception as e:
+            print(f"Error running routing engine on capacity threshold: {e}")
+
     return truck

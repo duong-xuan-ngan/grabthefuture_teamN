@@ -69,6 +69,16 @@ function pinTruck(code) {
   });
 }
 
+function getTruckCode(truck) {
+  if (!truck) return 'T';
+  if (truck.code) return truck.code;
+  const n = truck.name || '';
+  const afterTruck = n.replace(/^truck\s+/i, '').trim();
+  const first = afterTruck.split(/[\s·]/)[0] || '';
+  if (first) return first[0].toUpperCase();
+  return String(truck.id || 'T');
+}
+
 export default function MapPreview({ tasks = [], activeTask, truck }) {
   const containerRef = useRef(null);
   const mapRef = useRef(null);
@@ -116,12 +126,30 @@ export default function MapPreview({ tasks = [], activeTask, truck }) {
 
     // Filter tasks that have coords
     const withCoords = tasks.filter((t) => t.lat != null && t.lng != null);
-    if (!withCoords.length && !truck) return;
+
+    // Extract truck coordinates with fallback to activeTask or task list
+    let truckLat = truck?.lat;
+    let truckLng = truck?.lng;
+    if (truckLat == null || truckLng == null) {
+      if (activeTask?.truck_lat != null && activeTask?.truck_lng != null) {
+        truckLat = activeTask.truck_lat;
+        truckLng = activeTask.truck_lng;
+      } else {
+        const tWithCoords = tasks.find((t) => t.truck_lat != null && t.truck_lng != null);
+        if (tWithCoords) {
+          truckLat = tWithCoords.truck_lat;
+          truckLng = tWithCoords.truck_lng;
+        }
+      }
+    }
+
+    const hasTruck = truckLat != null && truckLng != null;
+    if (!withCoords.length && !hasTruck) return;
 
     // Build ordered waypoints for the route polyline:
     // truck current position → all non-done tasks in sequence order
     const routePoints = [];
-    if (truck?.lat != null) routePoints.push([truck.lat, truck.lng]);
+    if (hasTruck) routePoints.push([truckLat, truckLng]);
 
     const doneTasks    = withCoords.filter((t) => t.status === 'done' || t.status === 'unreachable');
     const activeTasks  = withCoords.filter((t) => t.status === 'active');
@@ -129,15 +157,15 @@ export default function MapPreview({ tasks = [], activeTask, truck }) {
 
     // Done route (green, faded)
     const donePoints = doneTasks.map((t) => [t.lat, t.lng]);
-    if (truck?.lat != null && donePoints.length) {
-      add(L.polyline([[truck.lat, truck.lng], ...donePoints], {
+    if (hasTruck && donePoints.length) {
+      add(L.polyline([[truckLat, truckLng], ...donePoints], {
         color: '#00B14F', weight: 2, opacity: 0.3, dashArray: null,
       }));
     }
 
     // Remaining route (dark dashed: truck → active → pending)
     const remaining = [
-      ...(truck?.lat != null ? [[truck.lat, truck.lng]] : []),
+      ...(hasTruck ? [[truckLat, truckLng]] : []),
       ...activeTasks.map((t) => [t.lat, t.lng]),
       ...pendingTasks.map((t) => [t.lat, t.lng]),
     ];
@@ -157,13 +185,14 @@ export default function MapPreview({ tasks = [], activeTask, truck }) {
     activeTasks.forEach((t) => add(L.marker([t.lat, t.lng], { icon: pinActive(t.priority_score) })));
 
     // Truck pin
-    if (truck?.lat != null) {
-      add(L.marker([truck.lat, truck.lng], { icon: pinTruck(truck.code) }));
+    if (hasTruck) {
+      const code = truck?.code || getTruckCode(truck) || 'T';
+      add(L.marker([truckLat, truckLng], { icon: pinTruck(code) }));
     }
 
     // Fit map to all visible points
     const allPts = [
-      ...(truck?.lat != null ? [[truck.lat, truck.lng]] : []),
+      ...(hasTruck ? [[truckLat, truckLng]] : []),
       ...withCoords.map((t) => [t.lat, t.lng]),
     ];
     if (allPts.length === 1) {
@@ -172,7 +201,7 @@ export default function MapPreview({ tasks = [], activeTask, truck }) {
       map.fitBounds(L.latLngBounds(allPts), { padding: [28, 28], maxZoom: 16, animate: false });
     }
     setTimeout(() => map.invalidateSize(), 60);
-  }, [tasks, truck]);
+  }, [tasks, truck, activeTask]);
 
   const activeEta = activeTask?.eta_minutes;
   const activeDist = activeTask?.distance_km;
