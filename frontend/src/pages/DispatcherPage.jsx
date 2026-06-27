@@ -14,7 +14,7 @@ export default function DispatcherPage() {
   const [hotspots, setHotspots] = useState([]);
   const [trucks, setTrucks] = useState([]);
   const [kpi, setKpi] = useState(null);
-  const [selectedId, setSelectedId] = useState('h1');
+  const [selectedId, setSelectedId] = useState(null);
   const [suggestion, setSuggestion] = useState(null);
 
   // Initial load + polling (F-ROUTE-04 implies re-evaluation triggers we
@@ -31,6 +31,9 @@ export default function DispatcherPage() {
       setHotspots(h);
       setTrucks(t);
       setKpi(k);
+      // Auto-select the first hotspot once data arrives (works for both
+      // string mock ids and integer backend ids).
+      setSelectedId((cur) => cur ?? (h[0] ? h[0].id : null));
     }
     load();
     const id = setInterval(load, POLL_MS);
@@ -54,12 +57,12 @@ export default function DispatcherPage() {
 
   async function onApprove() {
     if (!suggestion) return;
-    const next = await api.approveSuggestion(suggestion.id);
+    const next = await api.approveSuggestion(suggestion.id, suggestion);
     setSuggestion({ ...suggestion, ...next });
   }
   async function onReject() {
     if (!suggestion) return;
-    const next = await api.rejectSuggestion(suggestion.id);
+    const next = await api.rejectSuggestion(suggestion.id, suggestion);
     setSuggestion({ ...suggestion, ...next });
   }
   function onUndo() {

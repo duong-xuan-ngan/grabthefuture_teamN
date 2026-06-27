@@ -5,16 +5,18 @@ import IssueButton from './IssueButton.jsx';
 export default function ReportForm({ bin, submitting, onSubmit }) {
   const [issue, setIssue] = useState('overflow');
   const [note, setNote] = useState('');
-  const [photo, setPhoto] = useState(null);
+  const [photo, setPhoto] = useState(null);      // preview object-URL
+  const [photoFile, setPhotoFile] = useState(null); // raw File for upload
 
   function handleSubmit(e) {
     e.preventDefault();
-    onSubmit({ issue_type: issue, description: note, photo });
+    onSubmit({ issue_type: issue, description: note, photo, imageFile: photoFile });
   }
 
   function pickPhoto(e) {
     const file = e.target.files?.[0];
     if (!file) return;
+    setPhotoFile(file);
     setPhoto(URL.createObjectURL(file));
   }
 
@@ -75,7 +77,7 @@ export default function ReportForm({ bin, submitting, onSubmit }) {
             <img src={photo} alt="" className="w-full aspect-[16/10] object-cover" />
             <button
               type="button"
-              onClick={() => setPhoto(null)}
+              onClick={() => { setPhoto(null); setPhotoFile(null); }}
               className="absolute top-2 right-2 w-7 h-7 rounded-full bg-ink/70 text-white text-base flex items-center justify-center"
             >
               ×

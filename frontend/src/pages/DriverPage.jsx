@@ -8,8 +8,14 @@ import ShiftSummaryScreen from '../components/driver/ShiftSummaryScreen.jsx';
 import * as api from '../api/client.js';
 import { BIN_CATEGORIES, capacityStatus } from '../lib/constants.js';
 
-// Driver app — token-bound to a single truck. For the demo we pin to Truck B.
-const TRUCK_ID = 'tr-B';
+// Driver app — token-bound to a single truck. For the demo we pin one truck.
+// Mock mode uses string ids ('tr-B'); the real backend seeds integer ids (1, 2).
+// VITE_DRIVER_TRUCK_ID overrides; default matches the mock so mock mode is
+// unaffected when no backend is configured.
+const USE_MOCK =
+  import.meta.env.VITE_USE_MOCK === 'true' || !import.meta.env.VITE_API_URL;
+const TRUCK_ID =
+  import.meta.env.VITE_DRIVER_TRUCK_ID || (USE_MOCK ? 'tr-B' : '1');
 
 export default function DriverPage() {
   const [tab, setTab] = useState('list'); // 'list' | 'task' | 'shift'
@@ -29,7 +35,7 @@ export default function DriverPage() {
       api.listTrucks(),
     ]);
     setTasks(list);
-    const me = allTrucks.find((t) => t.id === TRUCK_ID);
+    const me = allTrucks.find((t) => String(t.id) === String(TRUCK_ID));
     setTruck(me);
     const active = list.find((t) => t.status === 'active');
     if (active && !activeId) {

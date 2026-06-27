@@ -22,6 +22,7 @@ export default function ResidentPage() {
     setSubmitting(true);
     const res = await api.createReport({
       bin_id: bin.bin_id,
+      waste_point_id: bin.waste_point_id,
       bin_name: bin.name,
       address: bin.address,
       ...payload,
