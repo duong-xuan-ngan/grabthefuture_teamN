@@ -9,6 +9,34 @@ from app.services.clustering import cluster_report
 router = APIRouter()
 
 
+@router.get("/{report_id}")
+def get_report(report_id: int, session: Session = Depends(get_session)):
+    report = session.get(Report, report_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    waste_point = session.get(WastePoint, report.waste_point_id)
+    return {
+        "id": report.id,
+        "waste_point_id": report.waste_point_id,
+        "bin_id": f"M-{report.waste_point_id:03d}",
+        "bin_name": waste_point.name if waste_point else f"Bin {report.waste_point_id}",
+        "address": waste_point.name if waste_point else "",
+        "issue_type": report.issue_type,
+        "description": report.description,
+        "image_url": report.image_url,
+        "status": report.status,
+        "created_at": report.created_at,
+        "timeline": [
+            {
+                "step": "received",
+                "label": "Report received",
+                "at": report.created_at,
+            }
+        ],
+    }
+
+
 @router.post("")
 async def create_report(
     waste_point_id: int = Form(...),

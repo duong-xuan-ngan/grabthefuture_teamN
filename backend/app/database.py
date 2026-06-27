@@ -4,7 +4,14 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-engine = create_engine(os.environ["DATABASE_URL"])
+database_url = os.getenv("DATABASE_URL")
+if not database_url:
+    raise RuntimeError(
+        "DATABASE_URL is not set. Copy ../.env.example to ../.env or create "
+        "backend/.env, then fill in your Supabase PostgreSQL connection string."
+    )
+
+engine = create_engine(database_url)
 
 
 def create_db_and_tables():
