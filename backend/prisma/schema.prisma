@@ -1,0 +1,133 @@
+// Prisma schema — WasteHotspot MVP
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Enums ─────────────────────────────────────────────────────────────────
+
+enum BinCategory {
+  small_residential
+  medium_residential
+  market_commercial
+  large_public
+}
+
+enum IssueType {
+  overflow
+  near_full
+  bulky_waste
+  bad_smell
+}
+
+enum HotspotStatus {
+  active
+  watching
+  resolved
+}
+
+enum TruckStatus {
+  available
+  on_route
+  near_full
+  full
+  off_shift
+}
+
+enum TaskStatus {
+  assigned
+  done
+  unreachable
+}
+
+// ── Models ────────────────────────────────────────────────────────────────
+
+model WastePoint {
+  id                      Int        @id @default(autoincrement())
+  name                    String
+  lat                     Float
+  lng                     Float
+  h3_cell                 String     @db.VarChar(15)
+  area_type               String     // e.g. "market", "school", "apartment", "street"
+  category                BinCategory
+  estimated_weight_kg     Float
+  normal_collection_time  String?    // e.g. "06:00"
+  created_at              DateTime   @default(now())
+
+  reports    Report[]
+  hotspots   Hotspot[]
+
+  @@index([h3_cell])
+}
+
+model Report {
+  id            Int        @id @default(autoincrement())
+  waste_point   WastePoint @relation(fields: [waste_point_id], references: [id])
+  waste_point_id Int
+  hotspot       Hotspot?   @relation(fields: [hotspot_id], references: [id])
+  hotspot_id    Int?
+  issue_type    IssueType
+  description   String?
+  image_url     String?
+  lat           Float
+  lng           Float
+  status        String     @default("pending")
+  created_at    DateTime   @default(now())
+}
+
+model Hotspot {
+  id             Int           @id @default(autoincrement())
+  waste_point    WastePoint    @relation(fields: [waste_point_id], references: [id])
+  waste_point_id Int
+  report_count   Int           @default(1)
+  severity       IssueType
+  priority_score Int           @default(0)
+  status         HotspotStatus @default(active)
+  created_at     DateTime      @default(now())
+  resolved_at    DateTime?
+
+  reports Report[]
+  tasks   Task[]
+}
+
+model Truck {
+  id               Int         @id @default(autoincrement())
+  name             String
+  lat              Float
+  lng              Float
+  h3_cell          String      @db.VarChar(15)
+  status           TruckStatus @default(available)
+  current_route_id Int?
+  max_capacity_kg  Float
+  current_load_kg  Float       @default(0)
+  updated_at       DateTime    @updatedAt
+
+  tasks Task[]
+
+  @@index([h3_cell])
+}
+
+model Task {
+  id                  Int        @id @default(autoincrement())
+  hotspot             Hotspot    @relation(fields: [hotspot_id], references: [id])
+  hotspot_id          Int
+  truck               Truck      @relation(fields: [truck_id], references: [id])
+  truck_id            Int
+  status              TaskStatus @default(assigned)
+  assigned_at         DateTime   @default(now())
+  completed_at        DateTime?
+  weight_collected_kg Float?
+}
+
+model User {
+  id       Int    @id @default(autoincrement())
+  username String @unique
+  password String // bcrypt hash
+  role     String // "dispatcher" | "driver" | "admin"
+  truck_id Int?   // only for drivers
+}
