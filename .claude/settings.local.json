@@ -3,7 +3,29 @@
     "allow": [
       "Bash(ls -la backend)",
       "Bash(ls -la frontend)",
-      "Bash(python -m py_compile app/*.py app/routes/*.py app/services/*.py app/utils/*.py main.py scripts/*.py)"
+      "Bash(python -m py_compile app/*.py app/routes/*.py app/services/*.py app/utils/*.py main.py scripts/*.py)",
+      "Bash(py -m py_compile app/*.py app/routes/*.py app/services/*.py app/utils/*.py main.py scripts/*.py)",
+      "Bash(git check-ignore *)",
+      "Bash(ls .venv/Scripts/python.exe .venv/bin/python)",
+      "Bash(ls .venv)",
+      "Bash(py -c \"import fastapi, h3, sqlmodel, psycopg2; print\\('deps OK on py launcher'\\)\")",
+      "Bash(wsl bash -lc ' *)",
+      "Bash(python3 -c \"import sys; [print\\(l[:400]\\) for l in sys.stdin]\")",
+      "Bash(py -m py_compile app/*.py app/routes/*.py app/services/*.py app/utils/*.py app/dependencies/*.py main.py scripts/*.py)",
+      "Bash(wsl bash *)",
+      "Read(//mnt/c/Users/Tran Loc/grabthefuture_teamN/**)",
+      "Bash(.venv/bin/python -m alembic upgrade head)",
+      "PowerShell(Set-Location \"c:\\\\Users\\\\Tran Loc\\\\grabthefuture_teamN\\\\backend\"; $env:PYTHONPATH = \".\"; $result = & \".venv\\\\bin\\\\python\" -m alembic upgrade head 2>&1; $result; Write-Host \"Exit: $LASTEXITCODE\")",
+      "PowerShell(New-Item -ItemType Directory -Path \"C:\\\\Temp\" -Force | Out-Null; Set-Location \"c:\\\\Users\\\\Tran Loc\\\\grabthefuture_teamN\\\\backend\"; $py = Resolve-Path \".venv\\\\bin\\\\python\"; & $py check_migrate.py 2>&1 | Out-File -FilePath \"C:\\\\Temp\\\\out.txt\" -Encoding utf8; Get-Content \"C:\\\\Temp\\\\out.txt\")",
+      "Bash(.venv/bin/python check_migrate.py)",
+      "Bash(ls /mnt/c/Users/ 2>&1 | head -5)",
+      "Read(//mnt/c/**)",
+      "Bash(ls /mnt/)",
+      "Read(//c//**)",
+      "PowerShell($py = \"c:\\\\Users\\\\Tran Loc\\\\AppData\\\\Local\\\\Programs\\\\Python\\\\Python313\\\\python.exe\"; Set-Location \"c:\\\\Users\\\\Tran Loc\\\\grabthefuture_teamN\\\\backend\"; & $py check_migrate.py 2>&1 | ForEach-Object { $_ | Out-String } | Write-Output)",
+      "Bash(/usr/bin/python3 --version)",
+      "Read(//usr/**)",
+      "Read(//usr/local/**)"
     ]
   }
 }

@@ -90,9 +90,9 @@ Stored in `constants.py` as `BIN_WEIGHT_DEFAULTS`. Drivers can override after co
 | Enable PostGIS on Supabase (`CREATE EXTENSION postgis`) | ⬜ Not started | One-time, done in Supabase SQL editor |
 | Run `python -m alembic upgrade head` or `create_db_and_tables()` | ⬜ Not started | |
 | `POST /api/reports` — persist report | ⬜ Not started | |
-| Supabase Storage photo upload integration (`_upload_to_supabase` in routes/reports.py) | ⬜ Not started | Need SUPABASE_URL + SUPABASE_KEY in .env |
+| Supabase Storage photo upload integration (`_upload_to_supabase` in routes/reports.py) | ✅ Done | Uploads to `report-photos`; falls back to None if unconfigured (NFR-07) |
 | `cluster_report()` — wire in clustering.py | ⬜ Not started | |
-| `compute_priority_score()` — wire repeat-offender query | ⬜ Not started | |
+| `compute_priority_score()` — wire repeat-offender query | ✅ Done | All 5 factors incl. `_is_truck_far` (schedule-based) |
 | `GET /api/hotspots` | ⬜ Not started | |
 | `GET /api/hotspots/:id` | ⬜ Not started | |
 | `GET /api/trucks` with computed capacity fields | ⬜ Not started | |

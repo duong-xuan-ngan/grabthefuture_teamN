@@ -100,18 +100,20 @@ The seed script (`scripts/seed.py`) sets up a full end-to-end demo flow:
 
 | Task | Status | Notes |
 |------|--------|-------|
-| `POST /api/auth/login` — bcrypt + JWT | ⬜ Not started | Use `passlib[bcrypt]` + `python-jose` |
-| JWT auth dependency (token verify) | ✅ Done (scaffolded) | In `dependencies/auth.py` |
+| `POST /api/auth/login` — bcrypt + JWT | ✅ Done | bcrypt + pyjwt; returns token/role/truck_id for driver+dispatcher+admin |
+| JWT auth dependency (token verify) | ✅ Done | `dependencies/auth.py`: `require_roles()`, gated by `AUTH_REQUIRED` |
 | `GET /api/tasks/:truckId` | ⬜ Not started | |
 | `PATCH /api/tasks/:id` — status update | ⬜ Not started | |
 | Weight increment on Done | ⬜ Not started | Call `PATCH /api/trucks/:id/load` |
 | Re-optimisation trigger after task Done | ⬜ Not started | Call `run_routing_engine()` |
 | Re-optimisation trigger on capacity threshold | ⬜ Not started | |
-| `LoginPage.jsx` (dispatcher + driver) | ⬜ Not started | |
+| `LoginPage.jsx` (dispatcher + driver + admin) | ✅ Done | Role-based redirect; RequireAuth guard in App.jsx |
 | `DriverPage.jsx` — task list | ⬜ Not started | Mobile layout target |
 | `TaskCard.jsx` — map pin, issue type, photos, weight | ⬜ Not started | |
 | `WeightInput.jsx` — pre-filled, overrideable | ⬜ Not started | |
-| Driver truck capacity display (top of view) | ⬜ Not started | F-DRIVER-03 |
+| Driver truck capacity display (top of view) | ✅ Done | F-DRIVER-03; header capacity bar |
+| Shift tab — real metrics | ✅ Done | `/api/tasks/driver/{id}/shift` (stops, weight, time, avg) |
+| Driver/Resident UI redesign — minimal, large tap targets | ✅ Done | Clean task list, big Done/weight buttons, photo display |
 | Wire Done → weight confirm → PATCH task | ⬜ Not started | |
 | Wire Unreachable → PATCH task | ⬜ Not started | |
 | Seed script — 25 waste points | ✅ Scaffolded | Needs `alembic upgrade head` first |

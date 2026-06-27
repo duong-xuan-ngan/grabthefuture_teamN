@@ -23,7 +23,8 @@ def main():
     with Session(engine) as session:
         points = session.exec(select(WastePoint)).all()
         for p in points:
-            url = f"{APP_BASE_URL}/report?bin={p.id}&lat={p.lat}&lng={p.lng}"
+            # Frontend resident route is /r?b=<waste_point_id> (see App.jsx).
+            url = f"{APP_BASE_URL}/r?b={p.id}"
             img = qrcode.make(url)
             out_path = OUTPUT_DIR / f"bin_{p.id}.png"
             img.save(str(out_path))

@@ -104,7 +104,7 @@ Truck: Truck Alpha  |  Detour: +8 min  |  Capacity: [████░░░░░
 | Non-blocking warning toast at 70% capacity | ⬜ Not started | |
 | `GET /api/dashboard/kpis` backend | ⬜ Not started | |
 | `GET /api/dashboard/repeat-offenders` backend | ⬜ Not started | |
-| CSV export button + backend endpoint | ⬜ Not started | Nice to Have |
+| CSV export button + backend endpoint | ✅ Done | `GET /api/dashboard/export?start&end`; Export button in Topbar |
 | Responsive layout (desktop Chrome/Edge target) | ⬜ Not started | |
 | End-to-end test: report → suggestion card appears | ⬜ Not started | |
 

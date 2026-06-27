@@ -23,8 +23,15 @@ DETOUR_MAX_MIN:        float = float(os.getenv("DETOUR_MAX_MIN", 30))
 CLUSTER_RADIUS_M:      float = float(os.getenv("CLUSTER_RADIUS_M", 50))
 CLUSTER_WINDOW_MIN:    int   = int(os.getenv("CLUSTER_WINDOW_MIN", 30))
 SCORE_RERUN_THRESHOLD: int   = int(os.getenv("SCORE_RERUN_THRESHOLD", 70))
-H3_RESOLUTION:         int   = int(os.getenv("H3_RESOLUTION", 9))
-TRUCK_NEARBY_RING:     int   = 2   # ~600 m at resolution 9
-TRUCK_FALLBACK_RING:   int   = 3   # ~900 m at resolution 9
+# H3 resolution 8: cell edge ≈ 531 m, adjacent-cell hop ≈ 0.9 km.
+# Ring radius ≈ k × 0.9 km, so ring-1 ≈ 0.9 km (primary), ring-2 ≈ 1.8 km (fallback).
+H3_RESOLUTION:         int   = int(os.getenv("H3_RESOLUTION", 8))
+TRUCK_NEARBY_RING:     int   = 1   # ~0.9 km at resolution 8
+TRUCK_FALLBACK_RING:   int   = 2   # ~1.8 km at resolution 8
 AVG_SPEED_KMH:         float = 25.0
 TRAFFIC_FACTOR:        float = 1.3
+
+# F-SCORE-01: +20 if the scheduled truck is more than this many hours away.
+SCHEDULED_TRUCK_FAR_HOURS: float = float(os.getenv("SCHEDULED_TRUCK_FAR_HOURS", 3))
+# SC-06: a "heavy" stop for projected-overload purposes (kg).
+HEAVY_STOP_KG: float = float(os.getenv("HEAVY_STOP_KG", 100))

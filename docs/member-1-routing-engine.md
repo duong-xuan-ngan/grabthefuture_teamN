@@ -84,10 +84,11 @@ backend/app/routes/routing.py     ← POST /api/routing/suggest, /approve/:id, /
 | `find_trucks_near` (H3 grid_disk ring lookup) | ✅ Done (spatial.py) | |
 | `can_accept` weight feasibility check | ✅ Done (capacity.py) | |
 | SC-01 through SC-04, SC-07 | ✅ Scaffolded (routing.py) | Needs integration testing |
-| SC-05 (multi-hotspot greedy) | ⬜ Not started | `run_routing_engine` processes all hotspots |
-| SC-06 (mid-route weight warning) | ⬜ Not started | Separate from main hotspot loop |
+| SC-05 (multi-hotspot greedy) | ✅ Done (routing.py) | Greedy by score; committed truck excluded from other hotspots' pool |
+| SC-06 (mid-route weight warning) | ✅ Done (routing.py) | `_sc06_warnings` projects load from remaining heavy stops |
 | Wire `POST /api/routing/suggest` | ✅ Done (routes/routing.py) | |
-| Wire approve / reject endpoints | ✅ Done (routes/routing.py) | |
+| Wire approve / reject endpoints | ✅ Done (routes/routing.py) | Feasibility-checked; ORS reorder on approve |
+| OpenRouteService reorder (Haversine fallback) | ✅ Done (services/ors.py) | Optimizes stop order; falls back if no ORS key/quota |
 | Unit test each scenario | ⬜ Not started | |
 | Integration test with seed data | ⬜ Not started | |
 
