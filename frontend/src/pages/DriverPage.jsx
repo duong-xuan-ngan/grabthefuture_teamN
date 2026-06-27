@@ -1,163 +1,219 @@
-// DriverPage — mobile task view
-// Member C owns this page. Target: Chrome/Safari mobile.
+import { useEffect, useState } from 'react';
+import TaskListScreen from '../components/driver/TaskListScreen.jsx';
+import TaskDetailScreen from '../components/driver/TaskDetailScreen.jsx';
+import WeightInputScreen from '../components/driver/WeightInputScreen.jsx';
+import CompletedScreen from '../components/driver/CompletedScreen.jsx';
+import UnreachableScreen from '../components/driver/UnreachableScreen.jsx';
+import ShiftSummaryScreen from '../components/driver/ShiftSummaryScreen.jsx';
+import * as api from '../api/client.js';
+import { BIN_CATEGORIES, capacityStatus } from '../lib/constants.js';
 
-import React, { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
-import L from 'leaflet';
-import CapacityBar from '../components/CapacityBar';
-import { fetchTasks, updateTask } from '../api/client';
-
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  iconUrl:       'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl:     'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-});
-
-const HCMC_CENTER = [10.7769, 106.7009];
-const POLL_MS = 30_000;
+// Driver app — token-bound to a single truck. For the demo we pin to Truck B.
+const TRUCK_ID = 'tr-B';
 
 export default function DriverPage() {
-  const truckId  = localStorage.getItem('wh_truck_id');
-  const [tasks, setTasks]               = useState([]);
-  const [activeTask, setActiveTask]     = useState(null);
-  const [showWeight, setShowWeight]     = useState(false);
-  const [weightKg, setWeightKg]         = useState('');
-  const [truck, setTruck]               = useState(null);
-
-  async function loadTasks() {
-    const data = await fetchTasks(truckId);
-    setTasks(data.tasks ?? []);
-    setTruck(data.truck ?? null);
-  }
+  const [tab, setTab] = useState('list'); // 'list' | 'task' | 'shift'
+  const [tasks, setTasks] = useState([]);
+  const [truck, setTruck] = useState(null);
+  const [activeId, setActiveId] = useState(null);
+  const [step, setStep] = useState('detail'); // detail | weight | completed | unreachable
+  const [weight, setWeight] = useState(150);
 
   useEffect(() => {
-    loadTasks();
-    const id = setInterval(loadTasks, POLL_MS);
-    return () => clearInterval(id);
+    refresh();
   }, []);
 
-  async function handleDone() {
-    setShowWeight(true);
+  async function refresh() {
+    const [list, allTrucks] = await Promise.all([
+      api.listTasks(TRUCK_ID),
+      api.listTrucks(),
+    ]);
+    setTasks(list);
+    const me = allTrucks.find((t) => t.id === TRUCK_ID);
+    setTruck(me);
+    const active = list.find((t) => t.status === 'active');
+    if (active && !activeId) {
+      setActiveId(active.id);
+      setWeight(active.estimated_weight_kg);
+    }
   }
 
-  async function handleConfirmWeight() {
-    await updateTask(activeTask.id, {
+  function openTask(taskId) {
+    const t = tasks.find((x) => x.id === taskId);
+    if (!t) return;
+    setActiveId(taskId);
+    setWeight(t.estimated_weight_kg);
+    setStep('detail');
+    setTab('task');
+  }
+
+  async function onMarkDone() {
+    setStep('weight');
+  }
+  async function onMarkUnreachable() {
+    await api.patchTask(activeId, { status: 'unreachable' });
+    setStep('unreachable');
+    await refresh();
+  }
+  async function onConfirmWeight() {
+    await api.patchTask(activeId, {
       status: 'done',
-      weight_collected_kg: parseFloat(weightKg) || activeTask.estimated_weight_kg,
+      weight_collected_kg: weight,
     });
-    setShowWeight(false);
-    setActiveTask(null);
-    setWeightKg('');
-    loadTasks();
+    setStep('completed');
+    await refresh();
+  }
+  async function onNext() {
+    const next = tasks.find((t) => t.status === 'pending');
+    if (next) {
+      setActiveId(next.id);
+      setWeight(next.estimated_weight_kg);
+      setStep('detail');
+      setTab('task');
+    } else {
+      setTab('list');
+    }
   }
 
-  async function handleUnreachable() {
-    await updateTask(activeTask.id, { status: 'unreachable' });
-    setActiveTask(null);
-    loadTasks();
-  }
-
-  const truckPct = truck
-    ? (truck.current_load_kg / truck.max_capacity_kg) * 100
-    : 0;
+  const activeTask = tasks.find((t) => t.id === activeId);
+  const cap = truck ? capacityStatus(truck.current_load_kg, truck.max_capacity_kg) : null;
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
-      {/* Truck capacity header */}
-      {truck && (
-        <div className="bg-white border-b border-gray-200 px-4 py-3">
-          <div className="text-xs text-gray-500 mb-1">{truck.name} — {truck.current_load_kg} / {truck.max_capacity_kg} kg</div>
-          <CapacityBar pct={truckPct} />
-        </div>
-      )}
-
-      {/* Weight input overlay */}
-      {showWeight && activeTask && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl p-6 mx-4 w-full max-w-sm space-y-4">
-            <h2 className="text-lg font-semibold">Confirm Weight Collected</h2>
-            <p className="text-sm text-gray-500">{activeTask.hotspot?.waste_point?.name}</p>
-            <div>
-              <label className="text-sm text-gray-600 block mb-1">Weight (kg)</label>
-              <input
-                type="number"
-                value={weightKg}
-                onChange={e => setWeightKg(e.target.value)}
-                placeholder={activeTask.estimated_weight_kg}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-lg"
-                min="0"
-              />
-              <p className="text-xs text-gray-400 mt-1">Default: {activeTask.estimated_weight_kg} kg (bin category)</p>
+    <div className="min-h-full flex flex-col bg-white text-ink">
+      {/* App header */}
+      <header className="flex-shrink-0 border-b border-hairline px-5 pt-4 pb-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-2xs text-ink-2">
+              {truck ? `${truck.name.split(' · ')[0]} · ${truck.driver}` : 'Loading…'}
             </div>
-            <button
-              onClick={handleConfirmWeight}
-              className="w-full bg-green-600 text-white font-semibold py-3 rounded-xl text-base"
-            >
-              ✓ Confirm
-            </button>
+            <div className="text-lg font-semibold tracking-tightish">
+              {tab === 'list' && 'Today\'s stops'}
+              {tab === 'task' && 'Current task'}
+              {tab === 'shift' && 'Shift summary'}
+            </div>
           </div>
-        </div>
-      )}
-
-      {/* Task detail */}
-      {activeTask ? (
-        <div className="flex flex-col flex-1">
-          <div className="bg-white px-4 py-3 border-b border-gray-100 flex items-center gap-2">
-            <button onClick={() => setActiveTask(null)} className="text-gray-400">← Back</button>
-            <h1 className="font-semibold text-gray-800">{activeTask.hotspot?.waste_point?.name}</h1>
-          </div>
-          <div className="h-48 w-full">
-            <MapContainer
-              center={[activeTask.hotspot?.waste_point?.lat ?? 10.77, activeTask.hotspot?.waste_point?.lng ?? 106.70]}
-              zoom={16}
-              className="h-full w-full"
-            >
-              <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-              <Marker position={[activeTask.hotspot?.waste_point?.lat, activeTask.hotspot?.waste_point?.lng]}>
-                <Popup>{activeTask.hotspot?.waste_point?.name}</Popup>
-              </Marker>
-            </MapContainer>
-          </div>
-          <div className="p-4 space-y-2 text-sm">
-            <div><span className="text-gray-500">Issue:</span> <strong>{activeTask.hotspot?.severity}</strong></div>
-            <div><span className="text-gray-500">Est. weight:</span> <strong>{activeTask.estimated_weight_kg} kg</strong></div>
-          </div>
-          <div className="p-4 flex gap-3 mt-auto">
-            <button
-              onClick={handleDone}
-              className="flex-1 bg-green-600 text-white font-bold py-4 rounded-xl text-lg min-h-[56px]"
-            >
-              ✓ Done
-            </button>
-            <button
-              onClick={handleUnreachable}
-              className="flex-1 bg-red-100 text-red-700 font-bold py-4 rounded-xl text-lg min-h-[56px]"
-            >
-              ✗ Unreachable
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="p-4 flex-1">
-          <h1 className="text-lg font-semibold text-gray-800 mb-3">My Tasks</h1>
-          {tasks.length === 0 && (
-            <p className="text-gray-400 text-sm">No tasks assigned. Check back soon.</p>
+          {truck && (
+            <div className="text-right">
+              <div className="text-[10px] uppercase tracking-wider text-ink-3">Load</div>
+              <div className="text-base font-semibold num">
+                {truck.current_load_kg.toLocaleString()}
+                <span className="text-xs text-ink-2 font-medium">
+                  /{truck.max_capacity_kg.toLocaleString()}kg
+                </span>
+              </div>
+            </div>
           )}
-          <div className="space-y-3">
-            {tasks.map(t => (
-              <button
-                key={t.id}
-                onClick={() => setActiveTask(t)}
-                className="w-full bg-white border border-gray-200 rounded-xl p-4 text-left shadow-sm"
-              >
-                <div className="font-medium text-gray-800">{t.hotspot?.waste_point?.name}</div>
-                <div className="text-xs text-gray-500 mt-1">{t.hotspot?.severity} · {t.estimated_weight_kg} kg</div>
-              </button>
-            ))}
-          </div>
         </div>
-      )}
+        {cap && (
+          <>
+            <div className="mt-2.5 h-[3px] bg-surface rounded-full overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all"
+                style={{
+                  width: `${cap.pct}%`,
+                  background:
+                    cap.level === 'full' ? '#B91C1C' : cap.level === 'near_full' ? '#B45309' : '#306D29',
+                }}
+              />
+            </div>
+            <div className="text-[10.5px] text-ink-2 num mt-1">
+              {cap.pct}% · {(truck.max_capacity_kg - truck.current_load_kg).toLocaleString()} kg remaining
+            </div>
+          </>
+        )}
+      </header>
+
+      {/* Body */}
+      <main className="flex-1 overflow-y-auto scrollbar-thin">
+        {tab === 'list' && (
+          <TaskListScreen tasks={tasks} onOpen={openTask} />
+        )}
+        {tab === 'task' && activeTask && step === 'detail' && (
+          <TaskDetailScreen
+            task={activeTask}
+            onDone={onMarkDone}
+            onUnreachable={onMarkUnreachable}
+            onBack={() => setTab('list')}
+          />
+        )}
+        {tab === 'task' && step === 'weight' && (
+          <WeightInputScreen
+            task={activeTask}
+            weight={weight}
+            setWeight={setWeight}
+            onConfirm={onConfirmWeight}
+            onCancel={() => setStep('detail')}
+          />
+        )}
+        {tab === 'task' && step === 'completed' && (
+          <CompletedScreen
+            weight={weight}
+            nextTask={tasks.find((t) => t.status === 'pending' || t.status === 'active')}
+            onNext={onNext}
+          />
+        )}
+        {tab === 'task' && step === 'unreachable' && (
+          <UnreachableScreen onNext={onNext} />
+        )}
+        {tab === 'shift' && <ShiftSummaryScreen tasks={tasks} truck={truck} />}
+      </main>
+
+      {/* Bottom tab bar */}
+      <nav className="flex-shrink-0 border-t border-hairline grid grid-cols-3 bg-white pb-safe">
+        <TabBtn
+          active={tab === 'list'}
+          onClick={() => setTab('list')}
+          label="Stops"
+          badge={tasks.filter((t) => t.status === 'pending' || t.status === 'active').length}
+          icon={
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+              <path d="M3 5h14M3 10h14M3 15h14" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            </svg>
+          }
+        />
+        <TabBtn
+          active={tab === 'task'}
+          onClick={() => activeTask && setTab('task')}
+          label="Current"
+          icon={
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+              <path d="M10 2 L17 6 V14 L10 18 L3 14 V6 Z" stroke="currentColor" strokeWidth="1.6" />
+              <circle cx="10" cy="10" r="2" fill="currentColor" />
+            </svg>
+          }
+        />
+        <TabBtn
+          active={tab === 'shift'}
+          onClick={() => setTab('shift')}
+          label="Shift"
+          icon={
+            <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+              <circle cx="10" cy="10" r="7" stroke="currentColor" strokeWidth="1.6" />
+              <path d="M10 6v4l3 2" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+            </svg>
+          }
+        />
+      </nav>
     </div>
+  );
+}
+
+function TabBtn({ active, onClick, label, icon, badge }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex flex-col items-center justify-center py-2.5 gap-0.5 relative ${
+        active ? 'text-ink' : 'text-ink-2'
+      }`}
+    >
+      <div className={active ? 'text-primary' : ''}>{icon}</div>
+      <div className="text-[10.5px] font-medium">{label}</div>
+      {badge ? (
+        <div className="absolute top-2 right-1/2 translate-x-3.5 min-w-[16px] h-4 px-1 rounded-full bg-primary text-white text-[9.5px] font-semibold flex items-center justify-center num">
+          {badge}
+        </div>
+      ) : null}
+    </button>
   );
 }

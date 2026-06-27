@@ -20,7 +20,7 @@ Member A owns the foundational data layer that every other member depends on. Th
 | Hotspot Clustering | F-CLUSTER-01 / F-CLUSTER-02 | 50 m / 30 min merge; severity escalation; aggregate photos into hotspot |
 | Priority Score Engine | F-SCORE-01 / F-SCORE-02 | Formula with all 5 weighted factors; `GET /api/hotspots` |
 | Bin & Truck Weight Model | F-WEIGHT-01 / F-WEIGHT-02 | Seed bin categories + defaults; `max_capacity_kg` config; expose via API |
-| Weight Feasibility Utility | F-WEIGHT-06 | `canAccept()` function consumed by routing engine (Member 1) |
+| Weight Feasibility Utility | F-WEIGHT-06 | `can_accept()` function consumed by routing engine (Member 1) |
 
 ---
 
@@ -108,7 +108,7 @@ Stored in `constants.py` as `BIN_WEIGHT_DEFAULTS`. Drivers can override after co
 
 ## Integration Points
 
-- **Member 1 (Routing):** consumes `GET /api/hotspots` and the `canAccept()` utility from `weightUtils.js`.
+- **Member 1 (Routing):** consumes `GET /api/hotspots` and the `can_accept()` utility from `services/capacity.py`.
 - **Member B (Dispatcher):** consumes `GET /api/hotspots`, `GET /api/trucks`; subscribes to polling.
 - **Member C (Driver):** `PATCH /api/trucks/:id/load` increments `current_load_kg` — Member A must ensure the trucks endpoint is live.
 - **Shared schema:** `waste_points`, `reports`, `hotspots`, `trucks`, `tasks` — agree with team before first migration.

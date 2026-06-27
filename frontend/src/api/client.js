@@ -1,112 +1,103 @@
-// Centralised API fetch helpers — shared across pages
+// Thin API client. Reads VITE_API_URL and VITE_USE_MOCK at build time.
+// If mock mode is on, calls are routed through ./mock.js with realistic
+// async timing; otherwise we hit the real backend over fetch.
 
-const BASE = '/api';
+import * as mock from './mock.js';
 
-function getToken() {
-  return localStorage.getItem('wh_token');
-}
+const BASE_URL = import.meta.env.VITE_API_URL || '';
+const USE_MOCK =
+  import.meta.env.VITE_USE_MOCK === 'true' || !BASE_URL;
 
-function authHeaders() {
-  return {
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${getToken()}`,
-  };
-}
-
-async function handleResponse(res) {
+async function http(method, path, body) {
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method,
+    headers: { 'Content-Type': 'application/json' },
+    body: body ? JSON.stringify(body) : undefined,
+  });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error || `HTTP ${res.status}`);
+    const text = await res.text().catch(() => '');
+    throw new Error(`${method} ${path} → ${res.status} ${text}`);
   }
+  if (res.status === 204) return null;
   return res.json();
 }
 
-// ── Auth ──────────────────────────────────────────────────────────────────
-export async function login(username, password) {
-  const res = await fetch(`${BASE}/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password }),
-  });
-  return handleResponse(res);
+// --------------------------------------------------------------------
+// Hotspots
+// --------------------------------------------------------------------
+export function listHotspots() {
+  return USE_MOCK ? mock.listHotspots() : http('GET', '/api/hotspots');
+}
+export function getHotspot(id) {
+  return USE_MOCK ? mock.getHotspot(id) : http('GET', `/api/hotspots/${id}`);
 }
 
-// ── Hotspots ──────────────────────────────────────────────────────────────
-export async function fetchHotspots() {
-  const res = await fetch(`${BASE}/hotspots`, { headers: authHeaders() });
-  return handleResponse(res);
+// --------------------------------------------------------------------
+// Trucks
+// --------------------------------------------------------------------
+export function listTrucks() {
+  return USE_MOCK ? mock.listTrucks() : http('GET', '/api/trucks');
 }
 
-export async function fetchHotspot(id) {
-  const res = await fetch(`${BASE}/hotspots/${id}`, { headers: authHeaders() });
-  return handleResponse(res);
+// --------------------------------------------------------------------
+// Routing suggestions
+// --------------------------------------------------------------------
+export function getSuggestion(hotspotId) {
+  return USE_MOCK
+    ? mock.getSuggestion(hotspotId)
+    : http('GET', `/api/routing/suggestion?hotspotId=${hotspotId}`);
+}
+export function approveSuggestion(suggestionId) {
+  return USE_MOCK
+    ? mock.approveSuggestion(suggestionId)
+    : http('POST', `/api/routing/suggestions/${suggestionId}/approve`);
+}
+export function rejectSuggestion(suggestionId) {
+  return USE_MOCK
+    ? mock.rejectSuggestion(suggestionId)
+    : http('POST', `/api/routing/suggestions/${suggestionId}/reject`);
 }
 
-// ── Trucks ────────────────────────────────────────────────────────────────
-export async function fetchTrucks() {
-  const res = await fetch(`${BASE}/trucks`, { headers: authHeaders() });
-  return handleResponse(res);
+// --------------------------------------------------------------------
+// Tasks (driver)
+// --------------------------------------------------------------------
+export function listTasks(truckId) {
+  return USE_MOCK
+    ? mock.listTasks(truckId)
+    : http('GET', `/api/tasks?truckId=${truckId}`);
+}
+export function patchTask(taskId, payload) {
+  return USE_MOCK
+    ? mock.patchTask(taskId, payload)
+    : http('PATCH', `/api/tasks/${taskId}`, payload);
 }
 
-export async function updateTruckLoad(truckId, weight_kg) {
-  const res = await fetch(`${BASE}/trucks/${truckId}/load`, {
-    method: 'PATCH',
-    headers: authHeaders(),
-    body: JSON.stringify({ weight_kg }),
-  });
-  return handleResponse(res);
+// --------------------------------------------------------------------
+// Reports (resident)
+// --------------------------------------------------------------------
+export function createReport(payload) {
+  return USE_MOCK
+    ? mock.createReport(payload)
+    : http('POST', '/api/reports', payload);
+}
+export function getReportStatus(reportId) {
+  return USE_MOCK
+    ? mock.getReportStatus(reportId)
+    : http('GET', `/api/reports/${reportId}`);
+}
+export function getBinByQr(binId) {
+  return USE_MOCK
+    ? mock.getBinByQr(binId)
+    : http('GET', `/api/bins/${binId}`);
 }
 
-// ── Tasks ─────────────────────────────────────────────────────────────────
-export async function fetchTasks(truckId) {
-  const res = await fetch(`${BASE}/tasks/${truckId}`, { headers: authHeaders() });
-  return handleResponse(res);
+// --------------------------------------------------------------------
+// Dashboard KPIs
+// --------------------------------------------------------------------
+export function getDashboardKPIs() {
+  return USE_MOCK
+    ? mock.getDashboardKPIs()
+    : http('GET', '/api/dashboard/kpis');
 }
 
-export async function updateTask(taskId, payload) {
-  // payload: { status: 'done'|'unreachable', weight_collected_kg?: number }
-  const res = await fetch(`${BASE}/tasks/${taskId}`, {
-    method: 'PATCH',
-    headers: authHeaders(),
-    body: JSON.stringify(payload),
-  });
-  return handleResponse(res);
-}
-
-// ── Routing ───────────────────────────────────────────────────────────────
-export async function approveSuggestion(suggestionId) {
-  const res = await fetch(`${BASE}/routing/approve/${suggestionId}`, {
-    method: 'POST',
-    headers: authHeaders(),
-  });
-  return handleResponse(res);
-}
-
-export async function rejectSuggestion(suggestionId) {
-  const res = await fetch(`${BASE}/routing/reject/${suggestionId}`, {
-    method: 'POST',
-    headers: authHeaders(),
-  });
-  return handleResponse(res);
-}
-
-// ── Dashboard ─────────────────────────────────────────────────────────────
-export async function fetchKpis() {
-  const res = await fetch(`${BASE}/dashboard/kpis`, { headers: authHeaders() });
-  return handleResponse(res);
-}
-
-export async function fetchRepeatOffenders() {
-  const res = await fetch(`${BASE}/dashboard/repeat-offenders`, { headers: authHeaders() });
-  return handleResponse(res);
-}
-
-// ── Reports (resident — unauthenticated) ─────────────────────────────────
-export async function submitReport(formData) {
-  // formData is a FormData object (supports photo upload)
-  const res = await fetch(`${BASE}/reports`, {
-    method: 'POST',
-    body: formData, // no Content-Type header — browser sets multipart boundary
-  });
-  return handleResponse(res);
-}
+export const META = { BASE_URL, USE_MOCK };

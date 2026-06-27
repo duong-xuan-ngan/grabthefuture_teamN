@@ -121,25 +121,26 @@ The submitted diagram shows a pipeline adapted from a **ride-hailing / food-deli
 | "Router từ các item đang có mà chưa giao" (route undelivered items) | This implies a parcel-delivery queue. We do not have a queue of items awaiting delivery; we have a fixed-route truck that needs to detour to a single hotspot |
 | Matching Engine as a separate service | Over-engineered for MVP. The matching logic is a small function inside the routing engine, not a separate microservice |
 
-**Verdict:** adopt the spatial-indexing concept and the Balance/Assign logic. Implement spatial lookups with **PostGIS** (`ST_DWithin`) rather than H3, since PostGIS is already available on Supabase and plays natively with Python/SQLAlchemy. Drop the user-matching pool and parcel-queue concepts — they belong to a different problem domain.
+**Verdict:** adopt the spatial-indexing concept and the Balance/Assign logic. Implement spatial lookups with **H3** (Uber's hierarchical hexagonal grid) at resolution 9, using `grid_disk(cell, k)` ring queries to retrieve candidate trucks — directly mirroring the original Grab-style diagram. Each `waste_point` and `truck` stores an indexed `h3_cell`; candidate lookup is a fast `h3_cell = ANY(:cells)` query against the ring set. The `h3` Python package computes cells in-process, so no database extension is required. Drop the user-matching pool and parcel-queue concepts — they belong to a different problem domain.
 
 ---
 
 ### 3.2 Adapted Routing Workflow
 
-The routing workflow for WasteHotspot, using PostGIS spatial queries on Supabase:
+The routing workflow for WasteHotspot, using H3 ring queries:
 
 ```
 Hotspot created (QR report clustered, Priority Score computed)
         │
         ▼
-[1] Convert hotspot bin location to PostGIS geometry
-    → ST_MakePoint(bin.lng, bin.lat) stored as GEOMETRY(Point, 4326)
+[1] Encode hotspot bin location to an H3 cell
+    → h3.latlng_to_cell(bin.lat, bin.lng, 9) stored as indexed h3_cell
         │
         ▼
-[2] Retrieve candidate trucks via spatial radius query
-    → SELECT trucks WHERE ST_DWithin(geom::geography, hotspot_geom::geography, 600)
-    → fallback: expand radius to 900 m if no truck found within 600 m
+[2] Retrieve candidate trucks via H3 ring lookup
+    → cells = h3.grid_disk(hotspot_cell, 2)   # ring-2 ≈ 600 m
+    → SELECT trucks WHERE h3_cell = ANY(cells)
+    → fallback: expand to ring-3 (≈ 900 m) if no truck found in ring-2
         │
         ▼
 [3] Weight feasibility filter
@@ -167,7 +168,7 @@ Hotspot created (QR report clustered, Priority Score computed)
     → routing engine re-runs for any remaining active hotspots
 ```
 
-**Spatial lookup for MVP:** With PostGIS on Supabase, steps 1–2 use `ST_DWithin` with a 600 m radius instead of H3 ring lookups — same concept, native to the chosen stack. If no truck is found within 600 m, expand the radius to 900 m before falling back to SC-04 (manual dispatch alert). The H3 indexing spirit from the original diagram is preserved; PostGIS is the implementation vehicle given the Python/Supabase stack.
+**Spatial lookup for MVP:** Steps 1–2 use H3 `grid_disk` ring queries at resolution 9 — ring-2 (≈ 600 m) as the primary lookup, ring-3 (≈ 900 m) as the fallback before escalating to SC-04 (manual dispatch alert). Cells are computed in-process by the `h3` Python package and matched against indexed `h3_cell` columns, so no database extension is required. This directly preserves the H3 indexing approach from the original Grab-style diagram.
 
 ---
 
@@ -186,13 +187,13 @@ The routing engine evaluates each active hotspot against the scenarios below **i
 - Two hotspots with equal Priority Score → serve the one with the older first-report timestamp first.
 - Two trucks with equal detour cost → prefer the one with more remaining capacity.
 
-| ID | Scenario Name | Trigger Condition | Weight Check | Spatial Lookup (PostGIS) | System Action | Rationale |
+| ID | Scenario Name | Trigger Condition | Weight Check | Spatial Lookup (H3) | System Action | Rationale |
 |----|--------------|-------------------|--------------|------------------|---------------|-----------|
-| SC-01 | Low priority, truck arriving soon | Priority Score ≤ 40; scheduled truck < 45 min away | `capacity_pct` < 70% | Truck within 300 m (on fixed route) | Keep fixed route unchanged | Lowest disruption; route integrity maintained |
-| SC-02 | High priority, cheap detour | Priority Score ≥ 70; nearest truck detour ≤ 15 min | `remaining_capacity_kg` ≥ bin estimated weight | Truck within 600 m | Reorder stops: insert hotspot as next stop for that truck | Handles urgency without significant delay to other stops |
-| SC-03 | High priority, current truck too far or too heavy | Priority Score ≥ 70; current truck detour > 15 min OR `capacity_pct` ≥ 70%; a second truck exists with detour ≤ 15 min | Second truck passes feasibility check | Second truck within 600 m | Reassign hotspot to the closer/lighter truck | Avoids sending a near-full truck; minimises total distance |
-| SC-04 | Critical priority, no feasible truck in range | Priority Score 90–100; all trucks in ring-3 either detour > 30 min or fail weight check | All trucks fail feasibility | No truck within 900 m passes | Alert dispatcher for manual decision; display all truck statuses and ETAs | Human judgment required; system surfaces full context |
-| SC-05 | Multiple simultaneous hotspots | 2+ active hotspots with Priority Score ≥ 70 at same time | Per-truck feasibility check for each hotspot | ST_DWithin runs per hotspot independently | Rank by Priority Score; assign greedily to nearest feasible truck per hotspot | Prevents over-dispatching; highest-value hotspot resolved first |
+| SC-01 | Low priority, truck arriving soon | Priority Score ≤ 40; scheduled truck < 45 min away | `capacity_pct` < 70% | Truck in ring-1 (≈ 300 m, on fixed route) | Keep fixed route unchanged | Lowest disruption; route integrity maintained |
+| SC-02 | High priority, cheap detour | Priority Score ≥ 70; nearest truck detour ≤ 15 min | `remaining_capacity_kg` ≥ bin estimated weight | Truck in ring-2 (≈ 600 m) | Reorder stops: insert hotspot as next stop for that truck | Handles urgency without significant delay to other stops |
+| SC-03 | High priority, current truck too far or too heavy | Priority Score ≥ 70; current truck detour > 15 min OR `capacity_pct` ≥ 70%; a second truck exists with detour ≤ 15 min | Second truck passes feasibility check | Second truck in ring-2 (≈ 600 m) | Reassign hotspot to the closer/lighter truck | Avoids sending a near-full truck; minimises total distance |
+| SC-04 | Critical priority, no feasible truck in range | Priority Score 90–100; all trucks in ring-3 either detour > 30 min or fail weight check | All trucks fail feasibility | No truck in ring-3 (≈ 900 m) passes | Alert dispatcher for manual decision; display all truck statuses and ETAs | Human judgment required; system surfaces full context |
+| SC-05 | Multiple simultaneous hotspots | 2+ active hotspots with Priority Score ≥ 70 at same time | Per-truck feasibility check for each hotspot | grid_disk ring lookup runs per hotspot independently | Rank by Priority Score; assign greedily to nearest feasible truck per hotspot | Prevents over-dispatching; highest-value hotspot resolved first |
 | SC-06 | Truck near capacity, approaching heavy bins | Any truck `capacity_pct` ≥ 70% with 2+ heavy stops remaining on fixed route | Projected load exceeds 90% before depot return | N/A (weight-triggered, not location-triggered) | Warn dispatcher; suggest swapping remaining heavy stops to another truck with capacity | Proactive overload prevention mid-route |
 | SC-07 | Single unverified report | Only 1 report, no photo, low-sensitivity area, bin category weight < 40 kg | N/A | N/A | No dispatch; flag as Watching; re-evaluate after 15 min or if a second report arrives | Avoids false positives; preserves dispatcher trust |
 
@@ -367,7 +368,8 @@ React + Vite SPA + Leaflet + OpenStreetMap
         ▼
 FastAPI Backend (Python)
         │
-        ├── Supabase PostgreSQL + PostGIS
+        ├── Supabase PostgreSQL (indexed h3_cell columns)
+        ├── H3 spatial indexing (h3 Python package, in-process)
         ├── Supabase Storage (report photos)
         ├── OpenRouteService Optimization API
         └── Python services: priority_score.py / clustering.py / routing.py / capacity.py
@@ -404,32 +406,35 @@ FastAPI Backend (Python)
 | Choice | Why |
 |--------|-----|
 | **Supabase PostgreSQL** | Hosted Postgres with a clean dashboard; the whole team shares one DB without local Docker setup |
-| **PostGIS extension** | Enables real distance queries, nearby bin lookups, and hotspot clustering via `ST_DWithin` |
+| **H3 spatial indexing** | Uber's hexagonal grid; the `h3` Python package computes cells in-process, so nearby-truck lookups are a fast indexed `h3_cell = ANY(cells)` query — no DB extension required |
 | **SQLAlchemy / SQLModel** | Natural fit for Python/FastAPI; avoids the Prisma/Node mismatch |
 | **Alembic** | Standard migration tool for Python backends |
 | **Supabase Storage** | Stores report photos and returns a public URL for `reports.image_url`; no Cloudinary needed |
 
-**PostGIS clustering pattern (replaces H3 for this stack):**
+**H3 spatial lookup pattern:**
 
-```sql
--- Enable PostGIS on Supabase
-CREATE EXTENSION IF NOT EXISTS postgis;
+```python
+import h3
 
--- Add geometry columns
-ALTER TABLE waste_points ADD COLUMN geom GEOMETRY(Point, 4326);
-ALTER TABLE trucks       ADD COLUMN geom GEOMETRY(Point, 4326);
+# Encode each waste point / truck position to a resolution-9 cell (stored in indexed h3_cell column)
+cell = h3.latlng_to_cell(lat, lng, 9)
 
--- Spatial index
-CREATE INDEX idx_waste_points_geom ON waste_points USING GIST(geom);
-CREATE INDEX idx_trucks_geom       ON trucks USING GIST(geom);
-
--- Example: find trucks within 600 m of a hotspot
-SELECT * FROM trucks
-WHERE ST_DWithin(geom::geography, ST_MakePoint(:lng, :lat)::geography, 600)
-  AND capacity_pct < 90;
+# Find candidate trucks within ring-2 (≈ 600 m) of a hotspot
+cells = h3.grid_disk(hotspot_cell, 2)
 ```
 
-> Supabase enables PostGIS by default — no manual installation required.
+```sql
+-- h3_cell is a plain indexed varchar column — no PostGIS extension needed
+CREATE INDEX idx_waste_points_h3 ON waste_points (h3_cell);
+CREATE INDEX idx_trucks_h3       ON trucks (h3_cell);
+
+-- Example: find candidate trucks whose cell is in the hotspot's ring set
+SELECT * FROM trucks
+WHERE h3_cell = ANY(:cells)
+  AND status NOT IN ('off_shift', 'full');
+```
+
+> H3 cells are computed by the `h3` Python package in-process — no database extension to enable.
 
 ---
 

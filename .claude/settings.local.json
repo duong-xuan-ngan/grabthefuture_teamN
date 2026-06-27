@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls -la backend)",
+      "Bash(ls -la frontend)",
+      "Bash(python -m py_compile app/*.py app/routes/*.py app/services/*.py app/utils/*.py main.py scripts/*.py)"
+    ]
+  }
+}

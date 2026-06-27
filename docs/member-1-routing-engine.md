@@ -7,7 +7,7 @@
 
 ## Skill Overview
 
-The routing engine is the intelligence layer of WasteHotspot. It takes live hotspot data and truck states, runs a spatial lookup via H3, applies weight feasibility filters, and returns a ranked dispatch *suggestion* to the dispatcher. The dispatcher always approves or rejects — the engine never acts autonomously.
+The routing engine is the intelligence layer of WasteHotspot. It takes live hotspot data and truck states, runs a spatial lookup via H3 (`grid_disk` ring search), applies weight feasibility filters, and returns a ranked dispatch *suggestion* to the dispatcher. The dispatcher always approves or rejects — the engine never acts autonomously.
 
 ---
 
@@ -15,7 +15,7 @@ The routing engine is the intelligence layer of WasteHotspot. It takes live hots
 
 | Area | Description |
 |------|-------------|
-| H3 spatial indexing | Encode bin/truck lat+lng to an H3 cell (resolution 9); query candidate trucks via `grid_disk(cell, k)` ring lookup |
+| H3 spatial indexing | Encode bin/truck lat+lng to an H3 cell (resolution 9); query candidate trucks via `grid_disk(cell, k)` ring lookup (ring-2 ≈ 600 m primary, ring-3 ≈ 900 m fallback) |
 | Weight feasibility filter | Discard trucks where `remaining_capacity_kg < bin.estimated_weight_kg` or `capacity_pct ≥ 90%` |
 | Detour cost calculation | `extra_minutes = haversine(truck, bin) / 25 km/h × 1.3` |
 | Scenario matching | Evaluate SC-01 → SC-07 in order; return first match per hotspot |
@@ -28,7 +28,7 @@ The routing engine is the intelligence layer of WasteHotspot. It takes live hots
 
 ```
 backend/app/services/routing.py   ← main logic (SC-01 → SC-07)
-backend/app/utils/spatial.py      ← latlng_to_cell, get_ring_cells, haversine, find_trucks_near (H3)
+backend/app/utils/spatial.py      ← latlng_to_cell, get_ring_cells, haversine_km, detour_minutes, find_trucks_near (H3)
 backend/app/services/capacity.py  ← can_accept, capacity_pct, remaining_kg
 backend/app/routes/routing.py     ← POST /api/routing/suggest, /approve/:id, /reject/:id
 ```
@@ -81,7 +81,7 @@ backend/app/routes/routing.py     ← POST /api/routing/suggest, /approve/:id, /
 |------|--------|-------|
 | Read & understand requirements | ⬜ Not started | |
 | `haversine_km` + `detour_minutes` | ✅ Done (spatial.py) | |
-| `find_trucks_near` (PostGIS ST_DWithin) | ✅ Done (spatial.py) | |
+| `find_trucks_near` (H3 grid_disk ring lookup) | ✅ Done (spatial.py) | |
 | `can_accept` weight feasibility check | ✅ Done (capacity.py) | |
 | SC-01 through SC-04, SC-07 | ✅ Scaffolded (routing.py) | Needs integration testing |
 | SC-05 (multi-hotspot greedy) | ⬜ Not started | `run_routing_engine` processes all hotspots |

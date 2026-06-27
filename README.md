@@ -26,55 +26,49 @@ WasteHotspot is a real-time waste-collection dispatch tool. Residents scan a QR 
 ## Quick Start (local)
 
 ### Prerequisites
-- Node.js ≥ 18
-- Docker (for Postgres)
-- A free [Cloudinary](https://cloudinary.com) account
+- Python ≥ 3.11
+- Node.js ≥ 18 (frontend tooling only)
+- A free [Supabase](https://supabase.com) project (hosted Postgres + PostGIS + Storage)
 
 ### 1. Clone & install
 ```bash
 git clone <repo-url>
 cd grabthefuture_teamN
 
-# Backend
-cd backend && npm install
+# Backend (Python / FastAPI)
+cd backend
+python -m venv .venv
+source .venv/bin/activate    # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
 
 # Frontend
 cd ../frontend && npm install
 ```
 
-### 2. Start Postgres
-```bash
-docker run --name wastehotspot-db \
-  -e POSTGRES_PASSWORD=pass \
-  -e POSTGRES_DB=wastehotspot \
-  -p 5432:5432 \
-  -d postgres:16
-```
-
-### 3. Configure environment
+### 2. Configure environment
 ```bash
 cp .env.example .env
-# Fill in CLOUDINARY_URL and JWT_SECRET
+# Fill in SUPABASE_URL, SUPABASE_KEY, DATABASE_URL, ORS_API_KEY, JWT_SECRET
 ```
 
-### 4. Run migrations & seed
+### 3. Run migrations & seed
 ```bash
 cd backend
-npx prisma migrate dev
-npm run seed
+alembic upgrade head
+python scripts/seed.py
 ```
 
-### 5. Start servers
+### 4. Start servers
 ```bash
 # Terminal 1 — backend
-cd backend && npm run dev
+cd backend && uvicorn app.main:app --reload --port 8000
 
 # Terminal 2 — frontend
 cd frontend && npm run dev
 ```
 
 Frontend: http://localhost:5173  
-Backend API: http://localhost:3000
+Backend API: http://localhost:8000 (Swagger docs at /docs)
 
 ---
 
@@ -82,13 +76,13 @@ Backend API: http://localhost:3000
 
 ```
 grabthefuture_teamN/
-├── backend/            ← Express + Prisma + H3
-│   ├── prisma/         ← Schema & migrations
-│   ├── src/
+├── backend/            ← FastAPI + SQLModel + PostGIS
+│   ├── alembic/        ← Migrations
+│   ├── app/
 │   │   ├── routes/     ← REST endpoints
-│   │   ├── services/   ← Business logic (scoring, clustering, routing)
-│   │   ├── middleware/ ← Auth, error handling
-│   │   └── utils/      ← H3 helpers, weight calc, constants
+│   │   ├── services/   ← Business logic (scoring, clustering, routing, capacity)
+│   │   ├── dependencies/ ← Auth (JWT), error handling
+│   │   └── utils/      ← Spatial helpers (H3 cells, haversine), weight calc, constants
 │   └── scripts/        ← QR generator, seed script
 ├── frontend/           ← React (Vite) + Leaflet + Tailwind
 │   └── src/
@@ -111,14 +105,15 @@ grabthefuture_teamN/
 
 | Layer | Choice |
 |-------|--------|
-| Frontend | React (Vite), Leaflet.js, Tailwind CSS |
-| Backend | Node.js, Express |
-| Spatial | Uber H3 (`h3-js`) |
-| Database | PostgreSQL 16, Prisma ORM |
-| File Storage | Cloudinary (free tier) |
-| QR Codes | `qrcode` npm package |
-| Auth | JWT (simple token login) |
-| Deployment | Railway.app (optional) |
+| Frontend | React (Vite), Leaflet + OpenStreetMap, Tailwind CSS |
+| Backend | FastAPI (Python), Pydantic, Uvicorn |
+| Spatial | Uber H3 (`h3` Python package, resolution 9) |
+| Database | Supabase PostgreSQL, SQLModel/SQLAlchemy, Alembic |
+| File Storage | Supabase Storage (`report-photos` bucket) |
+| Routing | OpenRouteService Optimization API (Haversine fallback) |
+| QR Codes | `qrcode` (Python) |
+| Auth | JWT (simple token login, `python-jose` + `passlib[bcrypt]`) |
+| Deployment | Vercel (frontend), Render / Railway (backend), Supabase (DB) |
 
 ---
 
@@ -138,7 +133,7 @@ grabthefuture_teamN/
 | POST | `/api/routing/reject/:id` | Dispatcher rejects suggestion | B |
 | GET | `/api/dashboard/kpis` | Shift KPIs | B |
 | GET | `/api/dashboard/repeat-offenders` | Repeat hotspot locations | B |
-| GET | `/api/admin/export` | CSV export | B |
+| GET | `/api/dashboard/export` | CSV export | B |
 | POST | `/api/auth/login` | Token login | C |
 
 ---
@@ -146,6 +141,7 @@ grabthefuture_teamN/
 ## Data Model
 
 ```sql
+-- lat/lng encoded into an indexed h3_cell (resolution 9) for grid_disk ring lookups
 waste_points  { id, name, lat, lng, h3_cell, area_type, category, estimated_weight_kg, normal_collection_time }
 reports       { id, waste_point_id, issue_type, description, image_url, lat, lng, created_at, status }
 hotspots      { id, waste_point_id, report_count, severity, priority_score, status, created_at, resolved_at }

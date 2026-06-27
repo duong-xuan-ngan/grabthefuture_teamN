@@ -34,8 +34,8 @@ frontend/src/components/SuggestionCard.jsx   ← scenario card with Approve/Reje
 frontend/src/components/CapacityBar.jsx      ← reusable green/amber/red bar
 frontend/src/components/KpiDashboard.jsx     ← shift KPIs widget
 frontend/src/api/dispatcher.js               ← fetch wrappers for dispatcher endpoints
-backend/src/routes/dashboard.js              ← GET /api/dashboard/kpis, repeat-offenders, export (stub)
-backend/src/routes/routing.js                ← POST /api/routing/approve/:id, reject/:id (stub)
+backend/app/routes/dashboard.py              ← GET /api/dashboard/kpis, repeat-offenders, export (stub)
+backend/app/routes/routing.py                ← POST /api/routing/approve/:id, reject/:id (stub)
 ```
 
 ---
