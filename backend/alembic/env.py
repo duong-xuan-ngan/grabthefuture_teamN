@@ -6,8 +6,10 @@ from sqlalchemy import create_engine, pool
 from alembic import context
 from dotenv import load_dotenv
 
-# .env sits in backend/ (one level above alembic/)
-load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+# Load .env from backend/ first, then fall back to project root
+_backend_dir = Path(__file__).resolve().parents[1]
+load_dotenv(_backend_dir / ".env")                          # backend/.env (if present)
+load_dotenv(_backend_dir.parent / ".env", override=False)   # project-root .env
 
 config = context.config
 

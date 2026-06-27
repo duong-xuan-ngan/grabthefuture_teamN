@@ -3,8 +3,10 @@ from pathlib import Path
 from sqlmodel import create_engine, Session, SQLModel
 from dotenv import load_dotenv
 
-# Load backend/.env regardless of working directory
-load_dotenv(Path(__file__).resolve().parents[1] / ".env")
+# Load .env from backend/ first, then fall back to project root
+_backend_dir = Path(__file__).resolve().parents[1]
+load_dotenv(_backend_dir / ".env")                          # backend/.env (if present)
+load_dotenv(_backend_dir.parent / ".env", override=False)   # project-root .env
 
 engine = create_engine(os.environ["DATABASE_URL"])
 

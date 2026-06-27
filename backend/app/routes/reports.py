@@ -49,25 +49,36 @@ def _resolve_waste_point(
     lng: float,
     session: Session,
 ) -> Optional[WastePoint]:
-    """Return the waste point for the report.
-
-    If waste_point_id is provided, return it directly.
-    Otherwise find the nearest waste point within 1 H3 ring (~150m) so
-    ad-hoc reports (driver, business) can still cluster with registered bins.
-    """
     if waste_point_id:
         return session.get(WastePoint, waste_point_id)
-    # Find closest registered waste point within ring-1.
     center = latlng_to_cell(lat, lng)
     cells = get_ring_cells(center, 1)
     for row in session.exec(
         select(WastePoint).where(WastePoint.h3_cell.in_(cells))
     ).all():
-        return row   # return first match (nearest by H3)
+        return row
     return None
 
 
-# ── Public resident endpoint (original, unchanged behaviour) ─────────────────
+def _report_dict(r: Report) -> dict:
+    return {
+        "id": r.id, "waste_point_id": r.waste_point_id, "hotspot_id": r.hotspot_id,
+        "issue_type": r.issue_type, "description": r.description, "image_url": r.image_url,
+        "lat": r.lat, "lng": r.lng, "status": r.status, "source": r.source,
+        "estimated_volume_kg": r.estimated_volume_kg, "deadline": r.deadline,
+        "created_at": r.created_at,
+    }
+
+
+def _hotspot_dict(h: Hotspot) -> dict:
+    return {
+        "id": h.id, "waste_point_id": h.waste_point_id, "report_count": h.report_count,
+        "severity": h.severity, "priority_score": h.priority_score,
+        "status": h.status, "created_at": h.created_at, "resolved_at": h.resolved_at,
+    }
+
+
+# ── Public resident endpoint ──────────────────────────────────────────────────
 
 @router.post("")
 async def create_report(
@@ -84,23 +95,20 @@ async def create_report(
     image_url = await _upload_to_supabase(image) if image else None
 
     report = _build_report(
-        waste_point_id=waste_point.id,
-        issue_type=issue_type,
-        lat=waste_point.lat,
-        lng=waste_point.lng,
-        description=description,
-        image_url=image_url,
-        source=WasteEventSource.resident,
-        estimated_volume_kg=None,
-        deadline=None,
+        waste_point_id=waste_point.id, issue_type=issue_type,
+        lat=waste_point.lat, lng=waste_point.lng, description=description,
+        image_url=image_url, source=WasteEventSource.resident,
+        estimated_volume_kg=None, deadline=None,
     )
     session.add(report)
     session.flush()
     hotspot = cluster_report(report, session)
-    return {"report": report, "hotspot": hotspot}
+    session.refresh(report)
+    session.refresh(hotspot)
+    return {"report": _report_dict(report), "hotspot": _hotspot_dict(hotspot)}
 
 
-# ── Driver report (authenticated — driver can report from any location) ───────
+# ── Driver report ─────────────────────────────────────────────────────────────
 
 @router.post("/driver")
 async def create_driver_report(
@@ -113,29 +121,25 @@ async def create_driver_report(
     image: Optional[UploadFile] = File(None),
     session: Session = Depends(get_session),
 ):
-    """Driver-originated report. waste_point_id is optional — driver may report
-    an ad-hoc location without a registered bin. Priority score gets +5 driver bonus."""
     wp = _resolve_waste_point(waste_point_id, lat, lng, session)
     image_url = await _upload_to_supabase(image) if image else None
 
     report = _build_report(
-        waste_point_id=wp.id if wp else None,
-        issue_type=issue_type,
-        lat=wp.lat if wp else lat,
-        lng=wp.lng if wp else lng,
-        description=description,
-        image_url=image_url,
+        waste_point_id=wp.id if wp else None, issue_type=issue_type,
+        lat=wp.lat if wp else lat, lng=wp.lng if wp else lng,
+        description=description, image_url=image_url,
         source=WasteEventSource.driver,
-        estimated_volume_kg=estimated_volume_kg,
-        deadline=None,
+        estimated_volume_kg=estimated_volume_kg, deadline=None,
     )
     session.add(report)
     session.flush()
     hotspot = cluster_report(report, session)
-    return {"report": report, "hotspot": hotspot}
+    session.refresh(report)
+    session.refresh(hotspot)
+    return {"report": _report_dict(report), "hotspot": _hotspot_dict(hotspot)}
 
 
-# ── Emergency pickup (high priority, no clustering window) ────────────────────
+# ── Emergency pickup ──────────────────────────────────────────────────────────
 
 @router.post("/emergency")
 async def create_emergency_pickup(
@@ -145,34 +149,30 @@ async def create_emergency_pickup(
     waste_point_id: Optional[int] = Form(None),
     description: Optional[str] = Form(None),
     estimated_volume_kg: Optional[float] = Form(None),
-    deadline: Optional[str] = Form(None),   # ISO string from frontend
+    deadline: Optional[str] = Form(None),
     image: Optional[UploadFile] = File(None),
     session: Session = Depends(get_session),
 ):
-    """Emergency / business pickup. Bypasses the 30-min clustering window and
-    applies +30 priority bonus — hotspot is created immediately."""
     wp = _resolve_waste_point(waste_point_id, lat, lng, session)
     image_url = await _upload_to_supabase(image) if image else None
     deadline_dt = datetime.fromisoformat(deadline) if deadline else None
 
     report = _build_report(
-        waste_point_id=wp.id if wp else None,
-        issue_type=issue_type,
-        lat=wp.lat if wp else lat,
-        lng=wp.lng if wp else lng,
-        description=description,
-        image_url=image_url,
+        waste_point_id=wp.id if wp else None, issue_type=issue_type,
+        lat=wp.lat if wp else lat, lng=wp.lng if wp else lng,
+        description=description, image_url=image_url,
         source=WasteEventSource.emergency,
-        estimated_volume_kg=estimated_volume_kg,
-        deadline=deadline_dt,
+        estimated_volume_kg=estimated_volume_kg, deadline=deadline_dt,
     )
     session.add(report)
     session.flush()
     hotspot = cluster_report(report, session)
-    return {"report": report, "hotspot": hotspot}
+    session.refresh(report)
+    session.refresh(hotspot)
+    return {"report": _report_dict(report), "hotspot": _hotspot_dict(hotspot)}
 
 
-# ── Business pickup request ───────────────────────────────────────────────────
+# ── Business pickup ───────────────────────────────────────────────────────────
 
 @router.post("/business")
 async def create_business_pickup(
@@ -186,26 +186,23 @@ async def create_business_pickup(
     image: Optional[UploadFile] = File(None),
     session: Session = Depends(get_session),
 ):
-    """Business-originated pickup (restaurant, market, etc.). +10 priority bonus."""
     wp = _resolve_waste_point(waste_point_id, lat, lng, session)
     image_url = await _upload_to_supabase(image) if image else None
     deadline_dt = datetime.fromisoformat(deadline) if deadline else None
 
     report = _build_report(
-        waste_point_id=wp.id if wp else None,
-        issue_type=issue_type,
-        lat=wp.lat if wp else lat,
-        lng=wp.lng if wp else lng,
-        description=description,
-        image_url=image_url,
+        waste_point_id=wp.id if wp else None, issue_type=issue_type,
+        lat=wp.lat if wp else lat, lng=wp.lng if wp else lng,
+        description=description, image_url=image_url,
         source=WasteEventSource.business,
-        estimated_volume_kg=estimated_volume_kg,
-        deadline=deadline_dt,
+        estimated_volume_kg=estimated_volume_kg, deadline=deadline_dt,
     )
     session.add(report)
     session.flush()
     hotspot = cluster_report(report, session)
-    return {"report": report, "hotspot": hotspot}
+    session.refresh(report)
+    session.refresh(hotspot)
+    return {"report": _report_dict(report), "hotspot": _hotspot_dict(hotspot)}
 
 
 # ── Report status lookup ──────────────────────────────────────────────────────
