@@ -248,8 +248,11 @@ export async function getBinByQr(binId) {
   await delay(120);
   // Look up a bin by short ID like "042" → wp-001 (demo: always returns gate B)
   const wp = wastePoints[0];
+  const normalizedBinId = binId
+    ? (/^m-/i.test(String(binId)) ? String(binId).toUpperCase() : `M-${String(binId).padStart(3, '0')}`)
+    : 'M-042';
   return {
-    bin_id: binId || 'M-042',
+    bin_id: normalizedBinId,
     waste_point_id: wp.id,
     name: wp.name,
     address: '123 Lê Lợi · District 1',

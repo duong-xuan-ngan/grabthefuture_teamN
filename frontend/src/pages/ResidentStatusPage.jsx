@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import StatusScreen from '../components/resident/StatusScreen.jsx';
 import * as api from '../api/client.js';
 
 export default function ResidentStatusPage() {
   const { reportId: idFromUrl } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
+  const basePath = location.pathname.startsWith('/resident') ? '/resident' : '/r';
   const [reportId, setReportId] = useState(idFromUrl || '');
   const [report, setReport] = useState(null);
   const [error, setError] = useState(null);
@@ -40,7 +42,7 @@ export default function ResidentStatusPage() {
           <div className="text-xs font-semibold">WasteHotspot</div>
         </div>
         <button
-          onClick={() => navigate('/r')}
+          onClick={() => navigate(`${basePath}?b=042`)}
           className="text-xs text-ink-2 underline underline-offset-2 hover:text-ink"
         >
           New report
@@ -62,7 +64,7 @@ export default function ResidentStatusPage() {
           onSubmit={(e) => {
             e.preventDefault();
             if (reportId.trim()) {
-              navigate(`/r/status/${reportId.trim()}`);
+              navigate(`${basePath}/status/${reportId.trim()}`);
               lookup(reportId.trim());
             }
           }}
