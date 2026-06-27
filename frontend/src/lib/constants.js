@@ -18,9 +18,9 @@ export const PRIORITY = {
 };
 
 export const SEVERITY_COLOR = {
-  high: '#B91C1C',
-  mid: '#B45309',
-  low: '#306D29',
+  high: '#DC2626',
+  mid: '#D97706',
+  low: '#00B14F',
 };
 
 export const ISSUE_TYPES = [

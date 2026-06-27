@@ -1,41 +1,47 @@
 import { clsx } from '../../lib/format.js';
 
-function NavItem({ icon, label, badge, active }) {
+function NavItem({ icon, label, badge, active, onClick }) {
   return (
-    <div
+    <button
+      onClick={onClick}
       className={clsx(
-        'px-2.5 py-1.5 text-[13px] rounded-md flex items-center gap-2.5 cursor-pointer',
+        'w-full px-3 py-2 text-[13px] rounded-btn flex items-center gap-2.5 text-left transition-colors duration-200',
         active
-          ? 'bg-white border border-hairline font-medium text-ink'
-          : 'text-ink-2 hover:bg-white/60',
+          ? 'bg-white/10 text-white font-semibold'
+          : 'text-white/60 hover:bg-white/8 hover:text-white/90',
       )}
     >
       {icon}
       <span>{label}</span>
       {badge != null && (
-        <span className="ml-auto text-[11px] px-1.5 py-px bg-primary-soft text-primary rounded-full font-medium num">
+        <span className="ml-auto text-[11px] px-1.5 py-px bg-primary text-white rounded-pill font-semibold num">
           {badge}
         </span>
       )}
-    </div>
+    </button>
   );
 }
 
-export default function Sidebar({ activeHotspotCount }) {
+export default function Sidebar({ activeHotspotCount, activeTab = 'operations', onTabChange }) {
+  const change = (tab) => onTabChange?.(tab);
+
   return (
-    <aside className="w-[220px] flex-shrink-0 bg-surface border-r border-hairline flex flex-col py-[18px]">
+    <aside className="w-[220px] flex-shrink-0 flex flex-col py-5" style={{ background: '#00212F' }}>
       {/* Brand */}
-      <div className="px-[18px] pb-6 flex items-center gap-2">
-        <div className="w-[22px] h-[22px] rounded-md bg-primary flex items-center justify-center">
-          <div className="w-1.5 h-1.5 rounded-full bg-white" />
+      <div className="px-5 pb-7 flex items-center gap-2.5">
+        <div className="w-7 h-7 rounded-btn flex items-center justify-center flex-shrink-0" style={{ background: '#00B14F' }}>
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+            <path d="M8 2L14 5.5V10.5L8 14L2 10.5V5.5L8 2Z" fill="white" />
+          </svg>
         </div>
-        <div className="text-[13px] font-semibold tracking-tightish">WasteHotspot</div>
+        <div className="text-[14px] font-bold text-white tracking-tightish">GrabWaste</div>
       </div>
 
       {/* Nav */}
-      <nav className="flex flex-col px-2 gap-px">
+      <nav className="flex flex-col px-3 gap-0.5">
         <NavItem
-          active
+          active={activeTab === 'operations'}
+          onClick={() => change('operations')}
           label="Operations"
           icon={
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
@@ -44,6 +50,8 @@ export default function Sidebar({ activeHotspotCount }) {
           }
         />
         <NavItem
+          active={activeTab === 'hotspots'}
+          onClick={() => change('hotspots')}
           label="Hotspots"
           badge={activeHotspotCount}
           icon={
@@ -53,6 +61,8 @@ export default function Sidebar({ activeHotspotCount }) {
           }
         />
         <NavItem
+          active={activeTab === 'trucks'}
+          onClick={() => change('trucks')}
           label="Trucks"
           icon={
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
@@ -64,6 +74,8 @@ export default function Sidebar({ activeHotspotCount }) {
           }
         />
         <NavItem
+          active={activeTab === 'reports'}
+          onClick={() => change('reports')}
           label="Reports"
           icon={
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
@@ -73,6 +85,19 @@ export default function Sidebar({ activeHotspotCount }) {
           }
         />
         <NavItem
+          active={activeTab === 'zones'}
+          onClick={() => change('zones')}
+          label="Zones"
+          icon={
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+              <path d="M8 1L14 4.5V11.5L8 15L2 11.5V4.5L8 1Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+              <path d="M8 5L11 6.75V10.25L8 12L5 10.25V6.75L8 5Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+            </svg>
+          }
+        />
+        <NavItem
+          active={activeTab === 'settings'}
+          onClick={() => change('settings')}
           label="Settings"
           icon={
             <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
@@ -84,15 +109,15 @@ export default function Sidebar({ activeHotspotCount }) {
       </nav>
 
       {/* Shift status */}
-      <div className="mt-auto px-[18px] pt-4 pb-1">
-        <div className="text-[10px] font-medium tracking-wider uppercase text-ink-3 mb-2">
+      <div className="mt-auto px-5 pt-4">
+        <div className="text-[10px] font-semibold tracking-widest uppercase mb-2" style={{ color: '#B0C4CC' }}>
           Shift
         </div>
-        <div className="flex items-center gap-1.5 text-xs">
-          <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+        <div className="flex items-center gap-1.5 text-xs text-white/80">
+          <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#00B14F' }} />
           <span className="num">Morning · 06:00–14:00</span>
         </div>
-        <div className="text-[11px] text-ink-2 mt-1">Hà — Dispatcher</div>
+        <div className="text-[11px] mt-1" style={{ color: '#B0C4CC' }}>Hà — Dispatcher</div>
       </div>
     </aside>
   );

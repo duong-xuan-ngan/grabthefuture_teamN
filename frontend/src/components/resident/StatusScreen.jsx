@@ -40,6 +40,28 @@ export default function StatusScreen({ report }) {
         )}
       </div>
 
+      {/* Uploaded photos (real URLs from Supabase Storage) */}
+      {report.photo_urls?.length > 0 && (
+        <div className="mt-5">
+          <div className="text-[11px] font-semibold tracking-wider uppercase text-ink-2 mb-2">
+            Photos · {report.photo_urls.length}
+          </div>
+          <div className="grid grid-cols-3 gap-1.5">
+            {report.photo_urls.map((url, i) => (
+              <a
+                key={i}
+                href={url}
+                target="_blank"
+                rel="noreferrer"
+                className="aspect-square rounded-lg overflow-hidden bg-surface border border-hairline"
+              >
+                <img src={url} alt={`Report photo ${i + 1}`} className="w-full h-full object-cover" />
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="mt-6">
         <div className="text-[11px] font-semibold tracking-wider uppercase text-ink-2 mb-3">
           Timeline

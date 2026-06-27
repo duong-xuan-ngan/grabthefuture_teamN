@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import PhoneFrame from '../components/shared/PhoneFrame.jsx';
 import StatusScreen from '../components/resident/StatusScreen.jsx';
 import * as api from '../api/client.js';
 
@@ -31,27 +32,44 @@ export default function ResidentStatusPage() {
   }
 
   return (
-    <div className="min-h-full flex flex-col bg-white text-ink">
-      <header className="flex-shrink-0 px-5 pt-4 pb-3 border-b border-hairline flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="w-[18px] h-[18px] rounded-md bg-primary flex items-center justify-center">
-            <div className="w-[5px] h-[5px] rounded-full bg-white" />
+    <PhoneFrame>
+    <div className="flex-1 flex flex-col bg-white text-ink min-h-0 overflow-hidden">
+      <header className="flex-shrink-0 px-5 pt-4 pb-3 border-b border-hairline flex items-center justify-between" style={{ background: '#00212F' }}>
+        <div className="flex items-center gap-2.5">
+          <div className="w-6 h-6 rounded-btn flex items-center justify-center flex-shrink-0" style={{ background: '#00B14F' }}>
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none">
+              <path d="M8 2L14 5.5V10.5L8 14L2 10.5V5.5L8 2Z" fill="white" />
+            </svg>
           </div>
-          <div className="text-xs font-semibold">WasteHotspot</div>
+          <div className="text-xs font-bold text-white">GrabWaste</div>
         </div>
-        <button
-          onClick={() => navigate('/r')}
-          className="text-xs text-ink-2 underline underline-offset-2 hover:text-ink"
-        >
-          New report
-        </button>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={() => navigate('/r')}
+            className="text-xs font-medium underline underline-offset-2 transition-colors"
+            style={{ color: '#B0C4CC' }}
+            onMouseEnter={e => { e.currentTarget.style.color = 'white'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = '#B0C4CC'; }}
+          >
+            Scan QR
+          </button>
+          <button
+            onClick={() => navigate('/r/order')}
+            className="text-xs font-medium underline underline-offset-2 transition-colors"
+            style={{ color: '#B0C4CC' }}
+            onMouseEnter={e => { e.currentTarget.style.color = 'white'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = '#B0C4CC'; }}
+          >
+            Request pickup
+          </button>
+        </div>
       </header>
 
       <main className="flex-1 overflow-y-auto scrollbar-thin px-5 pt-6 pb-10">
-        <div className="text-[10.5px] uppercase tracking-wider text-primary font-semibold">
+        <div className="text-[10.5px] uppercase tracking-widest font-bold mt-1" style={{ color: '#00B14F' }}>
           Status
         </div>
-        <h1 className="text-[22px] font-semibold tracking-tightish leading-tight mt-1">
+        <h1 className="text-[22px] font-bold tracking-tightish leading-tight mt-1">
           Check your report
         </h1>
         <p className="text-sm text-ink-2 mt-2">
@@ -72,11 +90,14 @@ export default function ResidentStatusPage() {
             value={reportId}
             onChange={(e) => setReportId(e.target.value)}
             placeholder="RPT-8142"
-            className="flex-1 px-3 py-3 text-sm border border-hairline rounded-xl bg-surface font-mono num focus:outline-none focus:border-ink"
+            className="flex-1 px-3 py-3 text-sm border border-hairline rounded-btn bg-surface font-mono num focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-colors"
           />
           <button
             type="submit"
-            className="px-4 py-3 bg-primary text-white text-sm font-semibold rounded-xl hover:bg-primary-dark transition-colors"
+            className="px-5 py-3 text-white text-sm font-bold rounded-pill transition-colors duration-200"
+            style={{ background: '#00B14F' }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#00873A'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#00B14F'; }}
           >
             Look up
           </button>
@@ -89,5 +110,6 @@ export default function ResidentStatusPage() {
         {report && <StatusScreen report={report} />}
       </main>
     </div>
+    </PhoneFrame>
   );
 }

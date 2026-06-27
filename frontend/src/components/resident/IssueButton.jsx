@@ -13,7 +13,7 @@ export default function IssueButton({ label, hint, selected, onClick }) {
         <div className="text-[13px] font-medium tracking-tightish">{label}</div>
         {selected && (
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <circle cx="7" cy="7" r="7" fill="#306D29" />
+            <circle cx="7" cy="7" r="7" fill="#00B14F" />
             <path d="M4 7L6 9L10 5" stroke="#FFFFFF" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         )}

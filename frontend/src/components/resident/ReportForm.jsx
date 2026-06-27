@@ -24,10 +24,10 @@ export default function ReportForm({ bin, submitting, onSubmit }) {
     <form onSubmit={handleSubmit} className="animate-fade-up">
       {/* Title block + bin context */}
       <div className="px-5 pt-6">
-        <div className="text-[11px] font-semibold uppercase tracking-wider text-primary mb-1.5">
+        <div className="text-[11px] font-bold uppercase tracking-widest mb-1.5" style={{ color: '#00B14F' }}>
           Report an issue
         </div>
-        <h1 className="text-[22px] font-semibold tracking-tightish leading-tight">
+        <h1 className="text-[22px] font-bold tracking-tightish leading-tight">
           What's wrong with this bin?
         </h1>
 
@@ -111,22 +111,20 @@ export default function ReportForm({ bin, submitting, onSubmit }) {
       </div>
 
       {/* Submit */}
-      <div className="px-5 pt-5 pb-8">
-        <div className="text-[11px] text-ink-3 mb-3 leading-snug">
-          No account needed. Your location and bin ID are attached automatically.
-        </div>
+      <div className="px-5 pt-6 pb-8">
         <button
           type="submit"
           disabled={submitting || !bin}
-          className="w-full py-3.5 text-[15px] font-semibold bg-primary text-white rounded-xl tracking-tightish hover:bg-primary-dark disabled:opacity-50 flex items-center justify-center gap-1.5"
+          className="w-full py-4 text-[17px] font-bold text-white rounded-pill tracking-tightish transition-colors duration-200 disabled:opacity-50"
+          style={{ background: '#00B14F' }}
+          onMouseEnter={e => { if (!e.currentTarget.disabled) e.currentTarget.style.background = '#00873A'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = '#00B14F'; }}
         >
           {submitting ? 'Sending…' : 'Submit report'}
-          {!submitting && (
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-              <path d="M2.5 6H9.5M9.5 6L6.5 3M9.5 6L6.5 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
-          )}
         </button>
+        <div className="text-[12px] text-ink-2 mt-3 text-center leading-snug">
+          No account needed · location attached automatically
+        </div>
       </div>
     </form>
   );

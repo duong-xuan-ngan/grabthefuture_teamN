@@ -14,13 +14,27 @@ const BASE_URL = import.meta.env.VITE_API_URL || '';
 const USE_MOCK =
   import.meta.env.VITE_USE_MOCK === 'true' || !BASE_URL;
 
+// --- Auth token (JWT) -------------------------------------------------
+// Stored in localStorage so the dispatcher/driver session survives reloads.
+// Sent as a bearer header on every request when present; harmless when the
+// backend has AUTH_REQUIRED=false.
+const TOKEN_KEY = 'wh_token';
+export function getToken() {
+  try { return localStorage.getItem(TOKEN_KEY); } catch { return null; }
+}
+export function setToken(t) {
+  try { t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY); } catch { /* ignore */ }
+}
+
 async function http(method, path, body, isForm = false) {
-  const opts = { method };
+  const opts = { method, headers: {} };
+  const token = getToken();
+  if (token) opts.headers.Authorization = `Bearer ${token}`;
   if (body !== undefined) {
     if (isForm) {
       opts.body = body; // FormData — let the browser set the boundary header
     } else {
-      opts.headers = { 'Content-Type': 'application/json' };
+      opts.headers['Content-Type'] = 'application/json';
       opts.body = JSON.stringify(body);
     }
   }
@@ -150,11 +164,12 @@ export async function getSuggestion(hotspotId) {
 
 export function approveSuggestion(suggestionId, ctx) {
   if (USE_MOCK) return mock.approveSuggestion(suggestionId);
-  // ctx = the suggestion object (carries hotspot_id + truck_id)
   const hotspotId = ctx?.hotspot_id ?? String(suggestionId).replace(/^sg-/, '');
-  const truckId = ctx?.truck_id;
-  const q = truckId != null ? `?truck_id=${truckId}` : '';
-  return http('POST', `/api/routing/approve/${hotspotId}${q}`).then(() => ({ status: 'approved' }));
+  const q = new URLSearchParams();
+  if (ctx?.truck_id != null) q.set('truck_id', ctx.truck_id);
+  if (ctx?.scenario_id)     q.set('scenario', ctx.scenario_id);
+  if (ctx?.action)          q.set('action', ctx.action);
+  return http('POST', `/api/routing/approve/${hotspotId}?${q}`).then(() => ({ status: 'approved' }));
 }
 export function rejectSuggestion(suggestionId, ctx) {
   if (USE_MOCK) return mock.rejectSuggestion(suggestionId);
@@ -169,14 +184,22 @@ export function listTasks(truckId) {
   if (USE_MOCK) return mock.listTasks(truckId);
   return http('GET', `/api/tasks/driver/${truckId}`).then((d) => (d.tasks || []).map(adaptTask));
 }
+export function getShiftSummary(truckId) {
+  if (USE_MOCK) return mock.getShiftSummary ? mock.getShiftSummary(truckId) : null;
+  return http('GET', `/api/tasks/driver/${truckId}/shift`);
+}
 export function patchTask(taskId, payload) {
   if (USE_MOCK) return mock.patchTask(taskId, payload);
-  // UI may send weight as a number/string; backend wants weight_collected_kg
   const body = { status: payload.status };
   if (payload.weight_collected_kg != null) {
     body.weight_collected_kg = Number(payload.weight_collected_kg);
   }
   return http('PATCH', `/api/tasks/${taskId}`, body);
+}
+
+export function updateTruckLocation(truckId, lat, lng) {
+  if (USE_MOCK) return Promise.resolve();
+  return http('PATCH', `/api/trucks/${truckId}/location?lat=${lat}&lng=${lng}`);
 }
 
 // --------------------------------------------------------------------
@@ -212,6 +235,49 @@ export function getBinByQr(binId) {
   if (USE_MOCK) return mock.getBinByQr(binId);
   return http('GET', `/api/bins/${binId}`);
 }
+// --------------------------------------------------------------------
+// Admin
+// --------------------------------------------------------------------
+export function adminListWastePoints() {
+  if (USE_MOCK) return Promise.resolve({ waste_points: [] });
+  return http('GET', '/api/admin/waste-points');
+}
+export function adminListManagers() {
+  if (USE_MOCK) return mock.adminListManagers();
+  return http('GET', '/api/admin/managers');
+}
+export function adminCreateManager(body) {
+  if (USE_MOCK) return mock.adminCreateManager(body);
+  return http('POST', '/api/admin/managers', body);
+}
+export function adminDeleteManager(userId) {
+  if (USE_MOCK) return mock.adminDeleteManager(userId);
+  return http('DELETE', `/api/admin/managers/${userId}`);
+}
+export function adminEscalate(hotspotId, reason) {
+  return http('POST', `/api/admin/hotspots/${hotspotId}/escalate${reason ? `?reason=${encodeURIComponent(reason)}` : ''}`);
+}
+export function adminCreateEmergency(wastePointId, { reason, issueType } = {}) {
+  let url = `/api/admin/hotspots/new-emergency?waste_point_id=${wastePointId}`;
+  if (reason) url += `&reason=${encodeURIComponent(reason)}`;
+  if (issueType) url += `&issue_type=${encodeURIComponent(issueType)}`;
+  return http('POST', url);
+}
+
+export function listZones() {
+  if (USE_MOCK) return mock.listZones();
+  return http('GET', '/api/zones');
+}
+
+export function listRoutes() {
+  if (USE_MOCK) return mock.listRoutes();
+  return http('GET', '/api/routes');
+}
+
+export function listWastePoints() {
+  if (USE_MOCK) return mock.listWastePoints();
+  return http('GET', '/api/bins').then((d) => d.waste_points || []);
+}
 
 // --------------------------------------------------------------------
 // Dashboard KPIs
@@ -219,6 +285,74 @@ export function getBinByQr(binId) {
 export function getDashboardKPIs() {
   if (USE_MOCK) return mock.getDashboardKPIs();
   return http('GET', '/api/dashboard/kpis');
+}
+
+export function getHotspotAreas() {
+  if (USE_MOCK) return mock.getHotspotAreas ? mock.getHotspotAreas() : Promise.resolve({ areas: [] });
+  return http('GET', '/api/dashboard/hotspot-areas');
+}
+
+// CSV export (F-DASH-03). Fetches with auth header then triggers a browser
+// download. `start`/`end` are optional ISO dates (YYYY-MM-DD).
+export async function exportCsv(start, end) {
+  if (USE_MOCK) {
+    // Minimal client-side CSV from mock hotspots so the button works offline.
+    const rows = await mock.listHotspots();
+    const header = 'hotspot_id,location,severity,priority_score\n';
+    const body = rows
+      .map((h) => `${h.id},"${h.name}",${h.severity},${h.priority_score}`)
+      .join('\n');
+    triggerDownload(new Blob([header + body], { type: 'text/csv' }), 'hotspots_mock.csv');
+    return;
+  }
+  const qs = new URLSearchParams();
+  if (start) qs.set('start', start);
+  if (end) qs.set('end', end);
+  const token = getToken();
+  const res = await fetch(`${BASE_URL}/api/dashboard/export?${qs}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  });
+  if (!res.ok) throw new Error(`Export failed → ${res.status}`);
+  const blob = await res.blob();
+  triggerDownload(blob, `hotspots_${start || 'all'}_${end || 'all'}.csv`);
+}
+
+function triggerDownload(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+// --------------------------------------------------------------------
+// Auth (driver / dispatcher / admin)
+// --------------------------------------------------------------------
+export async function register(username, password, role = 'driver') {
+  if (USE_MOCK) {
+    setToken('mock-token');
+    return { token: 'mock-token', role, truck_id: null };
+  }
+  const res = await http('POST', '/api/auth/register', { username, password, role });
+  if (res?.token) setToken(res.token);
+  return res;
+}
+
+export async function login(username, password) {
+  if (USE_MOCK) {
+    const res = await mock.mockLogin(username, password);
+    setToken(res.token);
+    return res;
+  }
+  const res = await http('POST', '/api/auth/login', { username, password });
+  if (res?.token) setToken(res.token);
+  return res;
+}
+export function logout() {
+  setToken(null);
 }
 
 export const META = { BASE_URL, USE_MOCK };

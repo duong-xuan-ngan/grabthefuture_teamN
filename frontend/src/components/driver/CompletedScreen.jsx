@@ -3,7 +3,7 @@ export default function CompletedScreen({ weight, nextTask, onNext }) {
     <div className="px-6 pt-12 pb-6 text-center animate-fade-up">
       <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary-soft flex items-center justify-center">
         <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-          <path d="M6 14L12 20L22 8" stroke="#306D29" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M6 14L12 20L22 8" stroke="#00B14F" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </div>
       <div className="text-lg font-semibold tracking-tightish">Task complete</div>
@@ -25,7 +25,10 @@ export default function CompletedScreen({ weight, nextTask, onNext }) {
       )}
       <button
         onClick={onNext}
-        className="mt-4 w-full py-3 text-sm font-medium bg-white text-ink border border-line rounded-xl hover:bg-surface"
+        className="mt-4 w-full py-3.5 text-sm font-bold text-white rounded-pill transition-colors duration-200"
+        style={{ background: '#00B14F' }}
+        onMouseEnter={e => { e.currentTarget.style.background = '#00873A'; }}
+        onMouseLeave={e => { e.currentTarget.style.background = '#00B14F'; }}
       >
         {nextTask ? 'Start next stop' : 'Back to stops'}
       </button>

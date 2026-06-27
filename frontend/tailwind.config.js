@@ -4,29 +4,33 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Brand
+        // Brand — Grab design system
         primary: {
-          DEFAULT: '#306D29',
-          soft: '#EEF3EC',
-          dark: '#1F4A1B',
+          DEFAULT: '#00B14F',   // Grab Green — CTA, accent
+          dark: '#00873A',      // Hover state
+          soft: '#E6F7EE',      // Soft tint for badges/backgrounds
         },
-        // Neutrals (warm)
+        brand: {
+          teal: '#00212F',      // Grab Deep Teal — sidebar, footer bg
+          'teal-text': '#B0C4CC', // muted text on teal bg
+        },
+        // Neutrals
         ink: {
-          DEFAULT: '#0B0B0A',
-          2: '#6B6B65',
-          3: '#A0A099',
+          DEFAULT: '#333333',
+          2: '#767676',
+          3: '#A3A3A3',
         },
-        hairline: '#ECECE6',
-        line: '#E1E1DA',
-        surface: '#FAFAF7',
+        hairline: '#E8E8E8',
+        line: '#DCDCDC',
+        surface: '#F5F5F5',
         // Severity
-        danger: '#B91C1C',
+        danger: '#DC2626',
         'danger-soft': '#FEE2E2',
-        warning: '#B45309',
+        warning: '#D97706',
         'warning-soft': '#FEF3C7',
       },
       fontFamily: {
-        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        sans: ['"Helvetica Neue"', 'Arial', 'system-ui', 'sans-serif'],
         mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
       },
       fontSize: {
@@ -35,6 +39,17 @@ export default {
       letterSpacing: {
         'tightish': '-0.015em',
         'tightest': '-0.025em',
+      },
+      borderRadius: {
+        'btn': '8px',
+        'card': '12px',
+        'modal': '16px',
+        'pill': '999px',
+      },
+      boxShadow: {
+        'card': '0 2px 8px rgba(0,0,0,0.08)',
+        'dropdown': '0 8px 24px rgba(0,0,0,0.14)',
+        'header': '0 2px 12px rgba(0,0,0,0.10)',
       },
       animation: {
         'fade-up': 'fade-up 0.3s ease-out',

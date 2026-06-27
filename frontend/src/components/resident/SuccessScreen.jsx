@@ -3,7 +3,7 @@ export default function SuccessScreen({ report, onAnother, onTrack }) {
     <div className="flex flex-col items-center justify-start text-center px-6 pt-10 pb-8 animate-fade-up">
       <div className="w-[72px] h-[72px] rounded-full bg-primary-soft flex items-center justify-center mb-4">
         <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-          <path d="M8 16L13 21L24 9" stroke="#306D29" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M8 16L13 21L24 9" stroke="#00B14F" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </div>
       <div className="text-[22px] font-semibold tracking-tightish">Thank you</div>
@@ -32,13 +32,16 @@ export default function SuccessScreen({ report, onAnother, onTrack }) {
 
       <button
         onClick={onTrack}
-        className="mt-5 w-full py-3 text-sm font-medium bg-white text-ink border border-line rounded-xl hover:bg-surface"
+        className="mt-5 w-full py-3 text-sm font-bold text-white rounded-pill transition-colors duration-200"
+        style={{ background: '#00B14F' }}
+        onMouseEnter={e => { e.currentTarget.style.background = '#00873A'; }}
+        onMouseLeave={e => { e.currentTarget.style.background = '#00B14F'; }}
       >
         Track this report
       </button>
       <button
         onClick={onAnother}
-        className="mt-3 text-[13px] text-ink-2 underline underline-offset-2 hover:text-ink"
+        className="mt-3 text-[13px] text-ink-2 underline underline-offset-2 hover:text-ink transition-colors"
       >
         Report another issue
       </button>
