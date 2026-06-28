@@ -6,15 +6,14 @@ export default {
       colors: {
         // Brand — Grab design system
         primary: {
-          DEFAULT: '#00B14F',   // Grab Green — CTA, accent
-          dark: '#00873A',      // Hover state
-          soft: '#E6F7EE',      // Soft tint for badges/backgrounds
+          DEFAULT: '#00B14F',
+          dark: '#00873A',
+          soft: '#E6F7EE',
         },
         brand: {
-          teal: '#00212F',      // Grab Deep Teal — sidebar, footer bg
-          'teal-text': '#B0C4CC', // muted text on teal bg
+          teal: '#00212F',
+          'teal-text': '#B0C4CC',
         },
-        // Neutrals
         ink: {
           DEFAULT: '#333333',
           2: '#767676',
