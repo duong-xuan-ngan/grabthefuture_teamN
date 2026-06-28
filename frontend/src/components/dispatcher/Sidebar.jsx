@@ -34,7 +34,7 @@ export default function Sidebar({ activeHotspotCount, activeTab = 'operations', 
             <path d="M8 2L14 5.5V10.5L8 14L2 10.5V5.5L8 2Z" fill="white" />
           </svg>
         </div>
-        <div className="text-[14px] font-bold text-white tracking-tightish">GrabWaste</div>
+        <div className="text-[14px] font-bold text-white tracking-tightish">Erac</div>
       </div>
 
       {/* Nav */}

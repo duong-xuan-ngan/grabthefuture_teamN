@@ -116,7 +116,7 @@ export default function AdminPage({ onLogout }) {
             </svg>
           </div>
           <div>
-            <div className="text-[14px] font-bold text-white">GrabWaste Admin</div>
+            <div className="text-[14px] font-bold text-white">Erac Admin</div>
             <div className="text-[11px]" style={{ color: '#B0C4CC' }}>Management console</div>
           </div>
         </div>

@@ -25,7 +25,7 @@ export default function PhoneFrame({ children }) {
           </svg>
         </div>
         <span className="text-sm font-bold tracking-tightish" style={{ color: 'rgba(255,255,255,0.45)' }}>
-          GrabWaste
+          Erac
         </span>
       </div>
 

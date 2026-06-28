@@ -158,7 +158,7 @@ export default function ResidentPage() {
             </svg>
           </div>
           <div className="text-xs font-bold text-white">
-            GrabWaste
+            Erac
             {isManager && (
               <span className="ml-1.5 text-[9px] font-bold tracking-widest px-1.5 py-0.5 rounded-pill"
                 style={{ background: '#00B14F' }}>

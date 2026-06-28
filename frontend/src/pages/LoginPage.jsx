@@ -43,7 +43,7 @@ export default function LoginPage() {
               <path d="M8 2L14 5.5V10.5L8 14L2 10.5V5.5L8 2Z" fill="white" />
             </svg>
           </div>
-          <div className="text-lg font-bold text-ink tracking-tightish">GrabWaste</div>
+          <div className="text-lg font-bold text-ink tracking-tightish">Erac</div>
         </div>
 
         <h1 className="text-[26px] font-bold tracking-tightish leading-tight text-ink" style={{ letterSpacing: '-0.5px' }}>
