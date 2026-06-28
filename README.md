@@ -29,10 +29,11 @@ WasteHotspot turns citizen QR-scan reports into real-time dispatch intelligence.
 
 | Member | Role |
 |--------|------|
-| Member 1 | Routing Engine (H3 spatial lookup, SC-01 to SC-09, weight feasibility) |
-| Member A | Backend & Data Pipeline (DB schema, report API, clustering, priority scoring, QR generation) |
-| Member B | Dispatcher Experience (live map, capacity UI, suggestion cards, KPI dashboard) |
-| Member C | Driver Experience & Integration (driver mobile view, weight input, seed script) |
+| Tran Van Loc | Routing Engine (H3 spatial lookup, SC-01 to SC-09, weight feasibility) |
+| Duong Xuan Ngan | Backend & Data Pipeline (DB schema, report API, clustering, priority scoring, QR generation) |
+| Do Minh Triet | Non-Tech Member, presenter, slides maker, business strategy) |
+| Ho Ho Gia Bao | Driver Experience & Integration (driver mobile view, weight input, seed script) |
+| Tran Gia Hien | Dispatcher Experience (live map, capacity UI, suggestion cards, KPI dashboard) |
 
 ## Docs
 
