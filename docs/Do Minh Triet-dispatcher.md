@@ -1,4 +1,4 @@
-# Member B — Dispatcher Experience
+# Do Minh Triet — Dispatcher Experience
 
 **Owner:** TBD
 **Branch:** `feature/dispatcher-ui`
