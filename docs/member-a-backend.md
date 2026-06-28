@@ -1,4 +1,4 @@
-# Member A — Backend & Data Pipeline
+# Duong Xuan Ngan — Backend & Data Pipeline
 
 **Owner:** TBD
 **Branch:** `feature/backend-pipeline`
