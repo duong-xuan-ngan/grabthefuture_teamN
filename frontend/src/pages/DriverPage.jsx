@@ -14,35 +14,55 @@ const USE_MOCK_CHECK =
 
 const USE_MOCK =
   import.meta.env.VITE_USE_MOCK === 'true' || !import.meta.env.VITE_API_URL;
-const TRUCK_ID =
-  import.meta.env.VITE_DRIVER_TRUCK_ID || (USE_MOCK ? 'tr-B' : '1');
+
+// Which truck this driver app drives: prefer the signed-in driver's own
+// truck_id (saved at login), then the env override, then a demo default.
+// This is why every session no longer shows truck 1 — it follows the account.
+function resolveTruckId() {
+  const fromLogin = api.getTruckId?.();
+  if (fromLogin != null && fromLogin !== '' && fromLogin !== 'null') return fromLogin;
+  return import.meta.env.VITE_DRIVER_TRUCK_ID || (USE_MOCK ? 'tr-B' : '1');
+}
 
 export default function DriverPage({ onLogout }) {
+  const [TRUCK_ID, setTruckId] = useState(resolveTruckId());
   const [tab, setTab] = useState('list');
   const [tasks, setTasks] = useState([]);
   const [truck, setTruck] = useState(null);
+  const [allTrucks, setAllTrucks] = useState([]);
   const [activeId, setActiveId] = useState(null);
   const [step, setStep] = useState('detail');
   const [weight, setWeight] = useState(150);
   const [shift, setShift] = useState(null);
 
-  useEffect(() => { refresh(); }, []);
+  // Re-fetch whenever the selected truck changes (login default or manual
+  // switch via the header picker).
+  useEffect(() => { refresh(); /* eslint-disable-next-line */ }, [TRUCK_ID]);
 
   async function refresh() {
-    const [list, allTrucks, shiftData] = await Promise.all([
-      api.listTasks(TRUCK_ID),
+    const [list, trucks, shiftData] = await Promise.all([
+      api.listTasks(TRUCK_ID, { includeDone: true }),
       api.listTrucks(),
       api.getShiftSummary(TRUCK_ID),
     ]);
     setTasks(list);
     setShift(shiftData);
-    const me = allTrucks.find((t) => String(t.id) === String(TRUCK_ID));
+    setAllTrucks(trucks || []);
+    const me = trucks.find((t) => String(t.id) === String(TRUCK_ID));
     setTruck(me);
     const active = list.find((t) => t.status === 'active');
     if (active && !activeId) {
       setActiveId(active.id);
       setWeight(active.estimated_weight_kg);
     }
+  }
+
+  function switchTruck(id) {
+    if (String(id) === String(TRUCK_ID)) return;
+    setActiveId(null);
+    setStep('detail');
+    setTab('list');
+    setTruckId(id);
   }
 
   function openTask(taskId) {
@@ -97,9 +117,26 @@ export default function DriverPage({ onLogout }) {
       <header className="flex-shrink-0 px-5 pt-3 pb-3" style={{ background: '#00212F' }}>
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-[11px]" style={{ color: '#B0C4CC' }}>
-              {truck ? `${truck.name.split(' · ')[0]} · ${truck.driver}` : 'Loading…'}
-            </div>
+            {/* Truck picker — switch which driver's stops are shown (demo aid;
+                with login it defaults to the signed-in driver's truck). */}
+            {allTrucks.length > 1 ? (
+              <select
+                value={TRUCK_ID}
+                onChange={(e) => switchTruck(e.target.value)}
+                className="bg-transparent text-[11px] font-medium border-none outline-none cursor-pointer mb-0.5 -ml-0.5"
+                style={{ color: '#B0C4CC' }}
+              >
+                {allTrucks.map((t) => (
+                  <option key={t.id} value={t.id} style={{ color: '#00212F' }}>
+                    {t.name.split(' · ')[0]} · {t.driver}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <div className="text-[11px]" style={{ color: '#B0C4CC' }}>
+                {truck ? `${truck.name.split(' · ')[0]} · ${truck.driver}` : 'Loading…'}
+              </div>
+            )}
             <div className="text-[18px] font-bold tracking-tightish text-white leading-tight">
               {tab === 'list' && "Today's stops"}
               {tab === 'task' && 'Current task'}

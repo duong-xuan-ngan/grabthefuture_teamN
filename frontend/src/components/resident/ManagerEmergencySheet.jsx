@@ -1,14 +1,12 @@
 import { useState } from 'react';
 import { ISSUE_TYPES } from '../../lib/constants.js';
-
-const ISSUE_ICON  = { overflow: '🗑️', near_full: '📦', bulky: '🪑', smell: '💨' };
-const ISSUE_COLOR = { overflow: '#DC2626', near_full: '#D97706', bulky: '#7C3AED', smell: '#0891B2' };
+import IssueButton from './IssueButton.jsx';
 
 export default function ManagerEmergencySheet({ bin, onDeclare, onBack }) {
-  const [issue,    setIssue]    = useState('overflow');
-  const [reason,   setReason]   = useState('');
-  const [busy,     setBusy]     = useState(false);
-  const [done,     setDone]     = useState(false);
+  const [issue,  setIssue]  = useState('overflow');
+  const [reason, setReason] = useState('');
+  const [busy,   setBusy]   = useState(false);
+  const [done,   setDone]   = useState(false);
 
   async function submit(e) {
     e.preventDefault();
@@ -25,43 +23,42 @@ export default function ManagerEmergencySheet({ bin, onDeclare, onBack }) {
 
   if (done) {
     return (
-      <div className="flex flex-col items-center justify-center px-6 pt-12 pb-8 text-center animate-fade-up">
-        <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4 text-3xl"
+      <div className="flex flex-col items-center text-center px-5 pt-10 pb-8 animate-fade-up">
+        <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
           style={{ background: '#FEE2E2' }}>
-          🚨
+          <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+            <path d="M14 4L25 10V18L14 24L3 18V10L14 4Z" fill="#DC2626" />
+            <path d="M14 9V15" stroke="white" strokeWidth="2.2" strokeLinecap="round" />
+            <circle cx="14" cy="19" r="1.3" fill="white" />
+          </svg>
         </div>
-        <div className="text-[22px] font-bold tracking-tightish text-ink mb-2">Emergency Declared</div>
-        <p className="text-[14px] text-ink-2 leading-snug max-w-[260px]">
+        <div className="text-[22px] font-bold tracking-tightish text-ink mb-1">Emergency Declared</div>
+        <p className="text-[13px] text-ink-2 leading-snug max-w-[260px] mb-6">
           Priority-100 hotspot created for <strong>{bin?.name || 'this point'}</strong>.
           The nearest truck will be dispatched automatically.
         </p>
-        <div className="mt-6 w-full px-5 py-4 bg-danger-soft border-2 rounded-card text-left"
-          style={{ borderColor: '#DC2626' }}>
-          <div className="flex items-center gap-3">
-            <span className="text-2xl">{ISSUE_ICON[issue]}</span>
-            <div>
-              <div className="text-[13px] font-bold text-danger">
-                {ISSUE_TYPES.find(t => t.key === issue)?.label}
-              </div>
-              <div className="text-[12px] text-ink-2">{bin?.name}</div>
-            </div>
-            <div className="ml-auto flex-shrink-0 px-2 py-0.5 rounded-pill text-[11px] font-bold text-white"
-              style={{ background: '#DC2626' }}>
-              PRIORITY 100
-            </div>
+
+        <div className="w-full px-4 py-3.5 bg-danger-soft border border-hairline rounded-card text-left mb-6"
+          style={{ borderLeftWidth: 3, borderLeftColor: '#DC2626' }}>
+          <div className="text-[11px] font-bold uppercase tracking-widest text-danger mb-1">Declared issue</div>
+          <div className="text-[14px] font-semibold text-ink">
+            {ISSUE_TYPES.find(t => t.key === issue)?.label}
           </div>
           {reason && (
-            <div className="mt-2 pt-2 border-t border-danger/20 text-[12px] text-ink-2">
-              "{reason}"
-            </div>
+            <div className="text-[12px] text-ink-2 mt-1">"{reason}"</div>
           )}
+          <div className="mt-2 flex items-center gap-1.5">
+            <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#DC2626' }} />
+            <span className="text-[11px] font-bold text-danger">Priority 100 · Active</span>
+          </div>
         </div>
+
         <button onClick={onBack}
-          className="mt-6 w-full py-3.5 text-[15px] font-bold text-white rounded-pill"
+          className="w-full py-3.5 text-[15px] font-bold text-white rounded-pill transition-colors duration-200"
           style={{ background: '#00B14F' }}
           onMouseEnter={e => { e.currentTarget.style.background = '#00873A'; }}
           onMouseLeave={e => { e.currentTarget.style.background = '#00B14F'; }}>
-          Back to report form
+          Back to status
         </button>
       </div>
     );
@@ -69,113 +66,88 @@ export default function ManagerEmergencySheet({ bin, onDeclare, onBack }) {
 
   return (
     <form onSubmit={submit} className="animate-fade-up">
-      {/* Back + title */}
-      <div className="px-5 pt-5 pb-3 border-b border-hairline">
+
+      {/* Title block — same layout as ReportForm */}
+      <div className="px-5 pt-6">
         <button type="button" onClick={onBack}
-          className="text-[13px] text-ink-2 mb-3 flex items-center gap-1 hover:text-ink">
+          className="text-[13px] text-ink-2 mb-4 flex items-center gap-1 hover:text-ink transition-colors">
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <path d="M8.5 3.5L5 7L8.5 10.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
-          Back to report form
+          Back to status
         </button>
-        <div className="flex items-center gap-2 mb-1">
-          <div className="w-6 h-6 rounded-full flex items-center justify-center text-sm flex-shrink-0"
-            style={{ background: '#DC2626', color: 'white' }}>!</div>
-          <div className="text-[18px] font-bold tracking-tightish text-ink">Declare Emergency</div>
-        </div>
-        <div className="text-[13px] text-ink-2 ml-8">
-          Creates a priority-100 hotspot · nearest truck dispatched immediately
-        </div>
-      </div>
 
-      {/* Bin info */}
-      <div className="px-5 pt-4">
-        <div className="px-3.5 py-3 bg-surface border border-hairline rounded-card flex items-center gap-3">
+        <div className="text-[11px] font-bold uppercase tracking-widest mb-1.5" style={{ color: '#DC2626' }}>
+          Declare emergency
+        </div>
+        <h1 className="text-[22px] font-bold tracking-tightish leading-tight text-ink">
+          What's the issue here?
+        </h1>
+
+        {/* Bin context card — identical to ReportForm */}
+        <div className="mt-4 px-3.5 py-3 bg-surface border border-hairline rounded-card flex items-center gap-3">
           <div className="w-8 h-8 rounded-lg bg-white border border-hairline flex items-center justify-center flex-shrink-0">
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <rect x="3" y="4" width="10" height="10" rx="1.5" stroke="#0B0B0A" strokeWidth="1.3" />
-              <path d="M5 4V2.5H11V4" stroke="#0B0B0A" strokeWidth="1.3" />
+              <rect x="3" y="4" width="10" height="10" rx="1.5" stroke="#333" strokeWidth="1.3" />
+              <path d="M5 4V2.5H11V4" stroke="#333" strokeWidth="1.3" />
             </svg>
           </div>
           <div className="flex-1 min-w-0">
-            <div className="text-[13px] font-semibold">{bin?.name || 'Loading…'}</div>
+            <div className="text-[13px] font-semibold text-ink">
+              {bin?.name || 'Loading…'}
+            </div>
             <div className="text-[11px] text-ink-2 truncate">{bin?.address || ' '}</div>
           </div>
           <div className="flex-shrink-0 px-2 py-0.5 rounded-pill text-[10px] font-bold text-white"
             style={{ background: '#DC2626' }}>
-            EMERGENCY
+            EMG
           </div>
         </div>
       </div>
 
-      {/* Waste type */}
+      {/* Issue choice — same grid as ReportForm using IssueButton */}
       <div className="px-5 pt-5">
-        <div className="text-[11px] font-bold uppercase tracking-widest text-ink-2 mb-3">
-          Type of waste issue
+        <div className="text-[11px] font-semibold tracking-widest uppercase text-ink-2 mb-2.5">
+          Issue
         </div>
         <div className="grid grid-cols-2 gap-2">
           {ISSUE_TYPES.map((t) => (
-            <button key={t.key} type="button" onClick={() => setIssue(t.key)}
-              className={`flex items-center gap-3 px-4 py-3.5 rounded-card border-2 text-left transition-all ${
-                issue === t.key ? 'bg-white shadow-card' : 'border-transparent bg-surface hover:bg-white hover:border-hairline'
-              }`}
-              style={issue === t.key ? { borderColor: ISSUE_COLOR[t.key] } : {}}>
-              <span className="text-2xl flex-shrink-0">{ISSUE_ICON[t.key]}</span>
-              <div className="flex-1 min-w-0">
-                <div className="text-[13px] font-bold leading-tight"
-                  style={issue === t.key ? { color: ISSUE_COLOR[t.key] } : {}}>
-                  {t.label}
-                </div>
-                <div className="text-[11px] text-ink-2 mt-0.5 leading-tight">{t.hint}</div>
-              </div>
-              {issue === t.key && (
-                <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0"
-                  style={{ background: ISSUE_COLOR[t.key] }}>
-                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-                    <path d="M2 5L4 7L8 3" stroke="white" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </div>
-              )}
-            </button>
+            <IssueButton
+              key={t.key}
+              label={t.label}
+              hint={t.hint}
+              selected={issue === t.key}
+              onClick={() => setIssue(t.key)}
+            />
           ))}
         </div>
       </div>
 
-      {/* Reason */}
+      {/* Reason — same as ReportForm "Note" field */}
       <div className="px-5 pt-5">
-        <div className="text-[11px] font-bold uppercase tracking-widest text-ink-2 mb-2">
-          Reason <span className="font-normal tracking-normal normal-case text-ink-3">· optional</span>
+        <div className="text-[11px] font-semibold tracking-widest uppercase text-ink-2 mb-2.5">
+          Reason <span className="font-normal text-ink-3 tracking-normal">· optional</span>
         </div>
         <textarea
           value={reason}
           onChange={(e) => setReason(e.target.value)}
-          rows={3}
-          placeholder="e.g. Concert just ended, 500+ people — major overflow expected in 20 min…"
-          className="w-full px-3.5 py-3 text-sm border-2 border-hairline rounded-card bg-surface resize-none outline-none focus:border-danger transition-colors"
+          rows={2}
+          placeholder="e.g. Concert just ended — expect major overflow in 20 min"
+          className="w-full px-3 py-2.5 text-sm border border-hairline rounded-card bg-surface resize-none outline-none focus:border-danger transition-colors"
         />
       </div>
 
-      {/* Summary + submit */}
-      <div className="px-5 pt-4 pb-8">
-        <div className="flex items-center gap-3 px-4 py-3 bg-danger-soft border-2 border-danger/30 rounded-card mb-4">
-          <span className="text-xl">{ISSUE_ICON[issue]}</span>
-          <div className="flex-1 min-w-0">
-            <div className="text-[12px] font-bold text-danger">
-              {ISSUE_TYPES.find(t => t.key === issue)?.label} · Priority 100
-            </div>
-            <div className="text-[11px] text-ink-2 truncate">{bin?.name}</div>
-          </div>
-        </div>
-
+      {/* Submit — same padding/structure as ReportForm */}
+      <div className="px-5 pt-6 pb-8">
         <button type="submit" disabled={busy || !bin}
-          className="w-full py-4 text-[17px] font-bold text-white rounded-pill transition-colors disabled:opacity-50"
+          className="w-full py-4 text-[17px] font-bold text-white rounded-pill transition-colors duration-200 disabled:opacity-50"
           style={{ background: '#DC2626' }}
           onMouseEnter={e => { if (!busy) e.currentTarget.style.background = '#B91C1C'; }}
           onMouseLeave={e => { e.currentTarget.style.background = '#DC2626'; }}>
           {busy ? 'Declaring…' : '🚨 Confirm Emergency'}
         </button>
-        <div className="text-[11px] text-ink-2 mt-3 text-center">
-          This action notifies the dispatcher immediately
+        <div className="text-[12px] text-ink-2 mt-3 text-center leading-snug">
+          Creates a priority-100 hotspot · dispatcher notified immediately
         </div>
       </div>
     </form>

@@ -40,7 +40,7 @@ export default function ReportForm({ bin, submitting, onSubmit }) {
           </div>
           <div className="flex-1 min-w-0">
             <div className="text-[13px] font-medium">
-              {bin?.bin_id ? `Bin ${bin.bin_id}` : 'Loading bin…'}
+              {bin?.name || (bin?.bin_id ? `Bin ${bin.bin_id}` : 'Loading bin…')}
             </div>
             <div className="text-[11px] text-ink-2 truncate">
               {bin?.address || ' '}

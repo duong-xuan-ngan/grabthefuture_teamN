@@ -23,6 +23,7 @@ export default function DispatcherPage({ onLogout }) {
   const [areas, setAreas] = useState([]);
   const [zones, setZones] = useState([]);
   const [selectedZoneId, setSelectedZoneId] = useState(null);
+  const [selectedTruckId, setSelectedTruckId] = useState(null);
   const [routes, setRoutes] = useState([]);
 
   useEffect(() => {
@@ -132,34 +133,13 @@ export default function DispatcherPage({ onLogout }) {
 
       case 'trucks':
         return (
-          <div className="flex-1 overflow-y-auto scrollbar-thin min-h-0 px-5 pt-4 pb-6">
-            <div className="text-[11px] font-semibold tracking-wider uppercase text-ink-2 mb-3">
-              Fleet · {trucks.length} active
-            </div>
-            {trucks.map((t) => {
-              const pct = t.capacity_pct ?? 0;
-              const level = pct >= 90 ? 'full' : pct >= 70 ? 'near_full' : 'available';
-              const barColor = level === 'full' ? '#DC2626' : level === 'near_full' ? '#D97706' : '#00B14F';
-              return (
-                <div key={t.id} className="py-3.5 border-t border-hairline">
-                  <div className="flex items-center justify-between mb-2">
-                    <div>
-                      <div className="text-[13px] font-medium">{t.name}</div>
-                      <div className="text-[11px] text-ink-2">Driver: {t.driver || '—'} · {t.stops_left ?? 0} stops left</div>
-                    </div>
-                    <div className="text-[12px] font-semibold num" style={{ color: barColor }}>
-                      {pct}%
-                    </div>
-                  </div>
-                  <div className="h-1.5 bg-surface rounded-full overflow-hidden">
-                    <div className="h-full rounded-full" style={{ width: `${pct}%`, background: barColor }} />
-                  </div>
-                  <div className="text-[11px] text-ink-2 num mt-1">
-                    {(t.current_load_kg ?? 0).toLocaleString()} / {(t.max_capacity_kg ?? 0).toLocaleString()} kg
-                  </div>
-                </div>
-              );
-            })}
+          <div className="flex-1 overflow-y-auto scrollbar-thin min-h-0">
+            <TruckList
+              trucks={trucks}
+              loading={loading}
+              selectedTruckId={selectedTruckId}
+              onSelectTruck={setSelectedTruckId}
+            />
           </div>
         );
 
@@ -304,7 +284,12 @@ export default function DispatcherPage({ onLogout }) {
             />
             <div className="flex-1 overflow-y-auto scrollbar-thin min-h-0">
               <HotspotList hotspots={hotspots} selectedId={selectedId} loading={loading} onSelect={setSelectedId} />
-              <TruckList trucks={trucks} loading={loading} />
+              <TruckList
+                trucks={trucks}
+                loading={loading}
+                selectedTruckId={selectedTruckId}
+                onSelectTruck={setSelectedTruckId}
+              />
             </div>
           </>
         );
@@ -334,6 +319,8 @@ export default function DispatcherPage({ onLogout }) {
               emergencyTruckIds={emergencyTruckIds}
               selectedZoneId={selectedZoneId}
               selectedId={selectedId}
+              selectedTruckId={selectedTruckId}
+              onSelectTruck={setSelectedTruckId}
               onSelect={(id) => { setSelectedId(id); setSideTab('operations'); }}
               suggestion={suggestion}
             />

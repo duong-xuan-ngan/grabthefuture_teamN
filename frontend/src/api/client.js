@@ -26,6 +26,16 @@ export function setToken(t) {
   try { t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY); } catch { /* ignore */ }
 }
 
+// Truck assigned to the signed-in driver — so the driver app shows that
+// driver's tasks, not a hardcoded truck. Cleared on logout.
+const TRUCK_KEY = 'wh_truck_id';
+export function getTruckId() {
+  try { return localStorage.getItem(TRUCK_KEY); } catch { return null; }
+}
+export function setTruckId(id) {
+  try { id != null ? localStorage.setItem(TRUCK_KEY, String(id)) : localStorage.removeItem(TRUCK_KEY); } catch { /* ignore */ }
+}
+
 async function http(method, path, body, isForm = false) {
   const opts = { method, headers: {} };
   const token = getToken();
@@ -180,9 +190,10 @@ export function rejectSuggestion(suggestionId, ctx) {
 // --------------------------------------------------------------------
 // Tasks (driver)
 // --------------------------------------------------------------------
-export function listTasks(truckId) {
-  if (USE_MOCK) return mock.listTasks(truckId);
-  return http('GET', `/api/tasks/driver/${truckId}`).then((d) => (d.tasks || []).map(adaptTask));
+export function listTasks(truckId, { includeDone = false } = {}) {
+  if (USE_MOCK) return mock.listTasks(truckId, { includeDone });
+  const q = includeDone ? '?include_done=true' : '';
+  return http('GET', `/api/tasks/driver/${truckId}${q}`).then((d) => (d.tasks || []).map(adaptTask));
 }
 export function getShiftSummary(truckId) {
   if (USE_MOCK) return mock.getShiftSummary ? mock.getShiftSummary(truckId) : null;
@@ -225,6 +236,31 @@ export function createReport(payload) {
     };
   });
 }
+// Scheduled / on-demand pickup booked by a resident — no account needed.
+// Routes through the emergency endpoint (instant hotspot, high priority) and
+// carries the desired pickup time as the deadline.
+export function createScheduledPickup(payload) {
+  if (USE_MOCK) return mock.createScheduledPickup(payload);
+  const form = new FormData();
+  form.append('issue_type', ISSUE_TO_API[payload.issue_type] || payload.issue_type || 'overflow');
+  form.append('lat', String(payload.lat));
+  form.append('lng', String(payload.lng));
+  if (payload.waste_point_id != null) form.append('waste_point_id', String(payload.waste_point_id));
+  if (payload.description) form.append('description', payload.description);
+  if (payload.deadline)    form.append('deadline', payload.deadline); // ISO string
+  return http('POST', '/api/reports/emergency', form, true).then((d) => {
+    const report = d.report || d;
+    return {
+      id: report.id,
+      bin_id: payload.waste_point_id,
+      bin_name: payload.bin_name,
+      address: payload.address,
+      issue_type: payload.issue_type,
+      deadline: payload.deadline,
+      status: 'scored',
+    };
+  });
+}
 export function getReportStatus(reportId) {
   if (USE_MOCK) return mock.getReportStatus(reportId);
   // strip any "RPT-" prefix the UI might pass; backend keys are integers
@@ -234,6 +270,11 @@ export function getReportStatus(reportId) {
 export function getBinByQr(binId) {
   if (USE_MOCK) return mock.getBinByQr(binId);
   return http('GET', `/api/bins/${binId}`);
+}
+// Hourly report volume for one waste point — 12 most recent 1-hour slots.
+export function getHourlyReportStats(wastePointId, slots = 12) {
+  if (USE_MOCK) return mock.getHourlyReportStats(wastePointId, slots);
+  return http('GET', `/api/reports/stats/hourly?waste_point_id=${wastePointId}&slots=${slots}`);
 }
 // --------------------------------------------------------------------
 // Admin
@@ -338,6 +379,7 @@ export async function register(username, password, role = 'driver') {
   }
   const res = await http('POST', '/api/auth/register', { username, password, role });
   if (res?.token) setToken(res.token);
+  setTruckId(res?.truck_id ?? null);
   return res;
 }
 
@@ -345,14 +387,17 @@ export async function login(username, password) {
   if (USE_MOCK) {
     const res = await mock.mockLogin(username, password);
     setToken(res.token);
+    setTruckId(res.truck_id ?? null);
     return res;
   }
   const res = await http('POST', '/api/auth/login', { username, password });
   if (res?.token) setToken(res.token);
+  setTruckId(res?.truck_id ?? null);
   return res;
 }
 export function logout() {
   setToken(null);
+  setTruckId(null);
 }
 
 export const META = { BASE_URL, USE_MOCK };

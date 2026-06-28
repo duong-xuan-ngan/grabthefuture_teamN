@@ -6,10 +6,29 @@ export default function SuccessScreen({ report, onAnother, onTrack }) {
           <path d="M8 16L13 21L24 9" stroke="#00B14F" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </div>
-      <div className="text-[22px] font-semibold tracking-tightish">Thank you</div>
-      <p className="text-sm text-ink-2 mt-2 leading-snug max-w-[260px]">
-        Your report has been received. A truck will be dispatched if needed.
-      </p>
+      {/* 'deadline' is present (string or explicit null) only for booked
+          pickups; a plain report has no deadline key at all. */}
+      {(() => {
+        const isBooking = 'deadline' in report;
+        const scheduledAt = report.deadline ? new Date(report.deadline) : null;
+        return (
+          <>
+            <div className="text-[22px] font-semibold tracking-tightish">
+              {isBooking ? 'Pickup booked' : 'Thank you'}
+            </div>
+            <p className="text-sm text-ink-2 mt-2 leading-snug max-w-[260px]">
+              {isBooking
+                ? 'A truck will be dispatched accordingly.'
+                : 'Your report has been received. A truck will be dispatched if needed.'}
+            </p>
+            {isBooking && (
+              <div className="mt-4 px-3.5 py-2 rounded-pill bg-primary-soft text-[12px] font-semibold" style={{ color: '#00873A' }}>
+                {scheduledAt ? `Scheduled for ${scheduledAt.toLocaleString()}` : 'Priority pickup · ASAP'}
+              </div>
+            )}
+          </>
+        );
+      })()}
 
       <div className="mt-7 w-full p-3.5 bg-surface border border-hairline rounded-xl text-left">
         <div className="flex items-center justify-between">

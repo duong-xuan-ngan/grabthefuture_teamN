@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import * as api from '../api/client.js';
 
 const ROLES = [
-  { value: 'dispatcher', label: 'Dispatcher', desc: 'Monitor the map, approve routing decisions' },
+  { value: 'user',       label: 'User',       desc: 'Report bins and book pickups' },
   { value: 'driver',     label: 'Driver',     desc: 'Receive tasks and report collections' },
+  { value: 'dispatcher', label: 'Dispatcher', desc: 'Monitor the map, approve routing decisions' },
 ];
 
 export default function RegisterPage() {
@@ -12,7 +13,7 @@ export default function RegisterPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm]   = useState('');
-  const [role, setRole]         = useState('driver');
+  const [role, setRole]         = useState('user');
   const [error, setError]       = useState(null);
   const [busy, setBusy]         = useState(false);
 
@@ -24,7 +25,10 @@ export default function RegisterPage() {
     setBusy(true);
     try {
       const res = await api.register(username.trim(), password, role);
-      navigate(res.role === 'driver' ? '/driver' : '/dispatcher', { replace: true });
+      const dest = res.role === 'driver' ? '/driver'
+        : res.role === 'user' ? '/r'
+        : '/dispatcher';
+      navigate(dest, { replace: true });
     } catch (err) {
       const msg = err.message || '';
       if (msg.includes('409') || msg.toLowerCase().includes('taken')) {
@@ -56,7 +60,7 @@ export default function RegisterPage() {
           Create account
         </h1>
         <p className="text-sm text-ink-2 mt-1.5 leading-relaxed">
-          Register as dispatcher or driver.
+          Register as a user, driver, or dispatcher.
         </p>
 
         <form onSubmit={submit} className="mt-6 bg-white border border-hairline rounded-card p-6 shadow-card space-y-4">
@@ -66,7 +70,7 @@ export default function RegisterPage() {
             <div className="text-[11px] font-semibold tracking-widest uppercase text-ink-2 mb-2">
               Role
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 gap-2">
               {ROLES.map((r) => (
                 <button
                   key={r.value}

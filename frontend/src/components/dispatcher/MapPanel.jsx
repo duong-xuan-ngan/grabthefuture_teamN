@@ -59,11 +59,25 @@ const ZONE_STATUS_STYLE = {
   overloaded: { fillOpacity: 0.24, opacity: 1.0, weight: 2.5 },
 };
 
-export default function MapPanel({ hotspots, trucks, wastePoints = [], zones = [], routes = [], emergencyTruckIds, selectedZoneId, selectedId, onSelect, suggestion }) {
+export default function MapPanel({ hotspots, trucks, wastePoints = [], zones = [], routes = [], emergencyTruckIds, selectedZoneId, selectedId, onSelect, suggestion, selectedTruckId: selectedTruckIdProp, onSelectTruck }) {
   const [showWaste, setShowWaste]   = useState(true);
   const [showZones, setShowZones]   = useState(true);
-  // Which truck's route to display — null = none
-  const [selectedTruckId, setSelectedTruckId] = useState(null);
+  // Which truck's route to display — null = none. Controlled when the parent
+  // passes selectedTruckId/onSelectTruck (so the Fleet list can drive it too),
+  // otherwise falls back to internal state (truck-marker clicks only).
+  const [selectedTruckIdInternal, setSelectedTruckIdInternal] = useState(null);
+  const isControlled   = onSelectTruck != null;
+  const selectedTruckId = isControlled ? selectedTruckIdProp : selectedTruckIdInternal;
+  const setSelectedTruckId = (next) => {
+    // Support functional updates against the current value.
+    const value = typeof next === 'function' ? next(selectedTruckId) : next;
+    if (isControlled) onSelectTruck(value);
+    else setSelectedTruckIdInternal(value);
+  };
+  // Latest setter, so map/marker click handlers bound once at init don't go
+  // stale (they capture this ref, not the closure).
+  const setSelectedTruckIdRef = useRef(setSelectedTruckId);
+  setSelectedTruckIdRef.current = setSelectedTruckId;
 
   const containerRef    = useRef(null);
   const mapRef          = useRef(null);
@@ -100,7 +114,7 @@ export default function MapPanel({ hotspots, trucks, wastePoints = [], zones = [
     mapRef.current = map;
 
     // Click on blank map → deselect truck
-    map.on('click', () => setSelectedTruckId(null));
+    map.on('click', () => setSelectedTruckIdRef.current(null));
 
     setTimeout(() => map.invalidateSize(), 80);
 
@@ -223,7 +237,7 @@ export default function MapPanel({ hotspots, trucks, wastePoints = [], zones = [
           .addTo(map)
           .on('click', (e) => {
             L.DomEvent.stopPropagation(e);
-            setSelectedTruckId((cur) => String(cur) === String(t.id) ? null : t.id);
+            setSelectedTruckIdRef.current((cur) => String(cur) === String(t.id) ? null : t.id);
           });
         anim[t.id] = { marker, route: t.route || null, progress: (idx * 0.17) % 1, speed: t.route ? 0.012 + (idx % 3) * 0.004 : 0, pos: start };
       } else {
@@ -308,7 +322,7 @@ export default function MapPanel({ hotspots, trucks, wastePoints = [], zones = [
         .addTo(map)
         .on('click', (e) => {
           L.DomEvent.stopPropagation(e);
-          setSelectedTruckId(null); // deselect truck when picking hotspot
+          setSelectedTruckIdRef.current(null); // deselect truck when picking hotspot
           onSelectRef.current && onSelectRef.current(h.id);
         });
       layersRef.current.hotspots[h.id] = m;

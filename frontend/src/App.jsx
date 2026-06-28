@@ -2,11 +2,9 @@ import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-
 import DispatcherPage from './pages/DispatcherPage.jsx';
 import DriverPage from './pages/DriverPage.jsx';
 import ResidentPage from './pages/ResidentPage.jsx';
-import ResidentStatusPage from './pages/ResidentStatusPage.jsx';
 import LoginPage from './pages/LoginPage.jsx';
 import RegisterPage from './pages/RegisterPage.jsx';
 import AdminPage from './pages/AdminPage.jsx';
-import ResidentOrderPage from './pages/ResidentOrderPage.jsx';
 import { getToken, logout, META } from './api/client.js';
 
 // Auth gate. In mock mode (no backend) we don't force login so the demo runs
@@ -56,11 +54,9 @@ export default function App() {
         }
       />
 
-      {/* Resident routes — all public by design (NFR-08). */}
+      {/* Resident — single unified page, all tabs inside (NFR-08). */}
       <Route path="/r" element={<ResidentPage />} />
-      <Route path="/r/order" element={<ResidentOrderPage />} />
-      <Route path="/r/status" element={<ResidentStatusPage />} />
-      <Route path="/r/status/:reportId" element={<ResidentStatusPage />} />
+      <Route path="/r/status/:reportId" element={<ResidentPage />} />
 
       <Route path="*" element={<Navigate to="/dispatcher" replace />} />
     </Routes>

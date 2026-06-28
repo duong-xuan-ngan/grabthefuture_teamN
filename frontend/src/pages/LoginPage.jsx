@@ -20,6 +20,7 @@ export default function LoginPage() {
       if (!dest) {
         if (res.role === 'driver')   dest = '/driver';
         else if (res.role === 'admin') dest = '/admin';
+        else if (res.role === 'user')  dest = '/r';
         else if (res.role === 'manager' && res.waste_point_id != null)
           dest = `/r?b=${res.waste_point_id}&role=manager`;
         else dest = '/dispatcher';

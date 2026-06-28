@@ -25,7 +25,15 @@
       "PowerShell($py = \"c:\\\\Users\\\\Tran Loc\\\\AppData\\\\Local\\\\Programs\\\\Python\\\\Python313\\\\python.exe\"; Set-Location \"c:\\\\Users\\\\Tran Loc\\\\grabthefuture_teamN\\\\backend\"; & $py check_migrate.py 2>&1 | ForEach-Object { $_ | Out-String } | Write-Output)",
       "Bash(/usr/bin/python3 --version)",
       "Read(//usr/**)",
-      "Read(//usr/local/**)"
+      "Read(//usr/local/**)",
+      "Bash(\"/c/Users/Tran Loc/grabthefuture_teamN/backend/.venv/bin/python\" -c \"import h3; print\\(h3.latlng_to_cell\\(10.7726, 106.6981, 8\\)\\)\")",
+      "Bash(npx vite *)",
+      "Bash(node node_modules/vite/bin/vite.js build)",
+      "Bash(node -e ' *)",
+      "Bash(python -c \"import ast; ast.parse\\(open\\('app/routes/reports.py'\\).read\\(\\)\\); print\\('OK reports.py syntax'\\)\")",
+      "Bash(curl -s -o /dev/null -w \"stats/hourly: %{http_code}\\\\n\" \"http://localhost:8000/api/reports/stats/hourly?waste_point_id=1&slots=12\")",
+      "Bash(curl -s \"http://localhost:8000/api/reports/stats/hourly?waste_point_id=1&slots=12\")",
+      "Bash(node -e 'require\\(\"@babel/parser\"\\).parse\\(require\\(\"fs\"\\).readFileSync\\(\"src/pages/ResidentPage.jsx\",\"utf8\"\\),{sourceType:\"module\",plugins:[\"jsx\"]}\\); console.log\\(\"OK ResidentPage.jsx\"\\)')"
     ]
   }
 }
