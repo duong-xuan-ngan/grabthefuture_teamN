@@ -4,7 +4,7 @@ from sqlmodel import Session, select
 
 from app.models import (
     Hotspot, Truck, WastePoint, HotspotStatus, Task, TaskStatus, TruckStatus,
-    RouteSegment, Zone,
+    RouteSegment, Zone, RejectedSuggestion,
 )
 from app.utils.constants import (
     DETOUR_CHEAP_MIN, CAPACITY_WARN_PCT, CAPACITY_FULL_PCT,
@@ -60,6 +60,12 @@ def run_routing_engine(session: Session) -> list[dict]:
     }
     hotspots = [h for h in hotspots if h.id not in assigned_hotspot_ids]
 
+    # Build set of rejected hotspot+truck pairs so the engine doesn't
+    # re-suggest combinations the dispatcher already turned down.
+    rejected_pairs: set[tuple[int, int]] = set()
+    for rej in session.exec(select(RejectedSuggestion)).all():
+        rejected_pairs.add((rej.hotspot_id, rej.truck_id))
+
     # Tie-break: higher score first, then older first-report timestamp.
     candidates = [h for h in hotspots if h.priority_score >= SCORE_RERUN_THRESHOLD]
     candidates.sort(key=lambda h: (-h.priority_score, h.created_at))
@@ -69,7 +75,7 @@ def run_routing_engine(session: Session) -> list[dict]:
     suggestions: list[dict] = []
 
     for h in candidates:
-        s = _evaluate(h, session, committed_truck_ids, multi)
+        s = _evaluate(h, session, committed_truck_ids, multi, rejected_pairs)
         if s:
             suggestions.append(s)
             if s.get("truck_id") is not None:
@@ -80,7 +86,7 @@ def run_routing_engine(session: Session) -> list[dict]:
     for h in hotspots:
         if h.priority_score >= SCORE_RERUN_THRESHOLD:
             continue
-        s = _evaluate(h, session, committed_truck_ids, False)
+        s = _evaluate(h, session, committed_truck_ids, False, rejected_pairs)
         if s:
             suggestions.append(s)
 
@@ -90,7 +96,8 @@ def run_routing_engine(session: Session) -> list[dict]:
     return suggestions
 
 
-def _candidate_trucks(hotspot, session, excluded: set[int]):
+def _candidate_trucks(hotspot, session, excluded: set[int],
+                      rejected_pairs: set[tuple[int, int]] | None = None):
     wp = session.get(WastePoint, hotspot.waste_point_id) if hotspot.waste_point_id else None
     lat = wp.lat if wp else None
     lng = wp.lng if wp else None
@@ -118,10 +125,14 @@ def _candidate_trucks(hotspot, session, excluded: set[int]):
                 "current_load_kg": truck.current_load_kg,
             })
 
+    rej = rejected_pairs or set()
     enriched = []
     est_weight = wp.estimated_weight_kg if wp else 0
     for row in nearby:
         if row["id"] in excluded:
+            continue
+        # Skip trucks that the dispatcher already rejected for this hotspot.
+        if (hotspot.id, row["id"]) in rej:
             continue
         truck = session.get(Truck, row["id"])
         if truck is None:
@@ -154,8 +165,9 @@ def _get_zone_truck(hotspot: Hotspot, session: Session) -> Optional[Truck]:
     return None
 
 
-def _evaluate(hotspot, session, excluded: set[int], multi: bool) -> Optional[dict]:
-    wp, enriched = _candidate_trucks(hotspot, session, excluded)
+def _evaluate(hotspot, session, excluded: set[int], multi: bool,
+              rejected_pairs: set[tuple[int, int]] | None = None) -> Optional[dict]:
+    wp, enriched = _candidate_trucks(hotspot, session, excluded, rejected_pairs)
     if not wp:
         return None
 
@@ -239,9 +251,37 @@ def _sc02(hotspot, trucks, multi=False):
 
 
 def _sc03(hotspot, trucks, multi=False):
+    """SC-03: nearest truck is too far (>15 min) or too heavy (≥70%), but a
+    *different* lighter/closer truck exists with cheap detour.
+
+    Key distinction from SC-02: SC-02 picks the best feasible truck overall.
+    SC-03 fires only when that best truck is disqualified, and a second-choice
+    truck with cheap detour is available for reassignment.
+    """
     if hotspot.priority_score < SCORE_RERUN_THRESHOLD:
         return None
-    alts = [t for t in trucks if t["feasible"] and t["detour"] <= DETOUR_CHEAP_MIN]
+
+    # Find the nearest truck overall (by detour), regardless of feasibility.
+    if not trucks:
+        return None
+    nearest = min(trucks, key=lambda t: t["detour"])
+
+    # SC-03 only fires when the nearest truck is disqualified.
+    nearest_disqualified = (
+        not nearest["feasible"]
+        or nearest["detour"] > DETOUR_CHEAP_MIN
+        or nearest["pct"] >= CAPACITY_WARN_PCT
+    )
+    if not nearest_disqualified:
+        return None  # SC-02 should have handled this
+
+    # Find a different truck that IS feasible with cheap detour.
+    alts = [
+        t for t in trucks
+        if t["feasible"]
+        and t["detour"] <= DETOUR_CHEAP_MIN
+        and t["truck"].id != nearest["truck"].id
+    ]
     if not alts:
         return None
     best = min(alts, key=lambda t: (t["detour"], -remaining_kg(t["truck"])))
@@ -251,7 +291,15 @@ def _sc03(hotspot, trucks, multi=False):
 
 
 def _sc04(hotspot, trucks):
-    if hotspot.priority_score < 90:
+    """SC-04: no feasible truck in range — manual dispatcher alert.
+
+    Fires for any high-priority hotspot (≥70) that has no feasible candidate,
+    not just critical (≥90) as in the original code.
+    """
+    if hotspot.priority_score < SCORE_RERUN_THRESHOLD:
+        return None
+    # If any truck is feasible, SC-04 should not fire.
+    if any(t["feasible"] for t in trucks):
         return None
     return {"scenario": "SC-04", "hotspot_id": hotspot.id, "truck_id": None,
             "detour_min": None, "capacity_pct": None, "action": "manual_alert"}

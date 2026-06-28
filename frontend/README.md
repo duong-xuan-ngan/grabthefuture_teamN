@@ -45,7 +45,7 @@ Open the three roles in separate tabs:
 
 | Var | Default | Effect |
 |-----|---------|--------|
-| `VITE_API_URL` | `http://localhost:3000` | Base URL of the Express backend |
+| `VITE_API_URL` | `http://localhost:8000` | Base URL of the FastAPI backend |
 | `VITE_USE_MOCK` | `true` | When `true` or `VITE_API_URL` is blank, all calls are answered by `src/api/mock.js` so the UI runs standalone |
 
 To wire the real backend, set `VITE_USE_MOCK=false` in `.env` and make
@@ -55,15 +55,15 @@ sure the backend exposes the endpoints below. The shapes match the
 ### Endpoint contract
 
 ```
-GET    /api/hotspots                              → Hotspot[]
-GET    /api/hotspots/:id                          → Hotspot
-GET    /api/trucks                                → Truck[]   (include `route`: [[lat,lng]…] for map polyline)
-GET    /api/routing/suggestion?hotspotId=…        → Suggestion
-POST   /api/routing/suggestions/:id/approve       → Suggestion
-POST   /api/routing/suggestions/:id/reject        → Suggestion
-GET    /api/tasks?truckId=…                       → Task[]
+GET    /api/hotspots                              → { hotspots: Hotspot[] }
+GET    /api/hotspots/:id                          → Hotspot detail
+GET    /api/trucks                                → { trucks: Truck[] }   (includes `route`: [[lat,lng]…] for map polyline)
+POST   /api/routing/suggest                       → { suggestions: Suggestion[] }
+POST   /api/routing/approve/:hotspotId            → Task assignment result
+POST   /api/routing/reject/:hotspotId             → Rejection result
+GET    /api/tasks/driver/:truckId                 → { tasks: Task[] }
 PATCH  /api/tasks/:id                             → Task         (body: { status, weight_collected_kg? })
-POST   /api/reports                               → Report       (body: { bin_id, issue_type, description, photo? })
+POST   /api/reports                               → { report, hotspot }   (multipart: waste_point_id, issue_type, description?, image?)
 GET    /api/reports/:id                           → Report
 GET    /api/bins/:binId                           → Bin (lookup by QR code)
 GET    /api/dashboard/kpis                        → KPI summary
@@ -134,6 +134,5 @@ npm run preview    # serve ./dist locally
 
 The build is a static SPA. Any host that supports SPA fallback to
 `index.html` works (Vercel, Netlify, Cloudflare Pages, an `nginx
-try_files`). For the Railway deploy noted in the tech-stack doc, point
-the Express backend's static handler at `frontend/dist` after running
-`npm run build`.
+try_files`). For the planned deployment, host this frontend separately
+from the FastAPI backend and set `VITE_API_URL` to the deployed API URL.

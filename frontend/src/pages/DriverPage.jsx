@@ -15,7 +15,7 @@ const USE_MOCK_CHECK =
 const USE_MOCK =
   import.meta.env.VITE_USE_MOCK === 'true' || !import.meta.env.VITE_API_URL;
 const TRUCK_ID =
-  import.meta.env.VITE_DRIVER_TRUCK_ID || (USE_MOCK ? 'tr-B' : '1');
+  api.getTruckId() || import.meta.env.VITE_DRIVER_TRUCK_ID || (USE_MOCK ? 'tr-B' : '1');
 
 export default function DriverPage({ onLogout }) {
   const [tab, setTab] = useState('list');
@@ -26,7 +26,11 @@ export default function DriverPage({ onLogout }) {
   const [weight, setWeight] = useState(150);
   const [shift, setShift] = useState(null);
 
-  useEffect(() => { refresh(); }, []);
+  useEffect(() => {
+    refresh();
+    const interval = setInterval(refresh, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   async function refresh() {
     const [list, allTrucks, shiftData] = await Promise.all([

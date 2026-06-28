@@ -40,6 +40,19 @@ export default function TaskDetailScreen({ task, tasks = [], truck, onDone, onUn
           {task.category ? ` · ${task.category.replace(/_/g, ' ')}` : ''}
         </div>
 
+        {task.photo_urls && task.photo_urls.length > 0 && (
+          <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+            {task.photo_urls.map((url, i) => (
+              <img
+                key={i}
+                src={url}
+                alt="Reported issue"
+                className="w-20 h-20 object-cover rounded-md border border-hairline flex-shrink-0 bg-surface"
+              />
+            ))}
+          </div>
+        )}
+
         <div className="mt-4 grid grid-cols-2 gap-3">
           <Fact label="Est. weight" value={task.estimated_weight_kg} suffix="kg" />
           <Fact label="Distance" value={task.distance_km ?? '—'} suffix={task.distance_km != null ? 'km' : ''} />

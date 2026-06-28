@@ -68,7 +68,7 @@ def task_view(
     hotspot: Optional[Hotspot],
     wp: Optional[WastePoint],
     truck: Optional[Truck],
-    photo_count: int,
+    photo_urls: list[str],
     sequence: int,
     ui_status: str,
 ) -> dict:
@@ -94,7 +94,7 @@ def task_view(
         "estimated_weight_kg": wp.estimated_weight_kg if wp else None,
         "issue_type":          hotspot.severity if hotspot else None,
         "priority_score":      hotspot.priority_score if hotspot else None,
-        "photos":              photo_count,
+        "photo_urls":          photo_urls,
         "sequence":            sequence,
         "distance_km":         distance_km,
         "eta_minutes":         eta_minutes,

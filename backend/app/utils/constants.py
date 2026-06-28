@@ -23,11 +23,11 @@ DETOUR_MAX_MIN:        float = float(os.getenv("DETOUR_MAX_MIN", 30))
 CLUSTER_RADIUS_M:      float = float(os.getenv("CLUSTER_RADIUS_M", 50))
 CLUSTER_WINDOW_MIN:    int   = int(os.getenv("CLUSTER_WINDOW_MIN", 30))
 SCORE_RERUN_THRESHOLD: int   = int(os.getenv("SCORE_RERUN_THRESHOLD", 70))
-# H3 resolution 8: cell edge ≈ 531 m, adjacent-cell hop ≈ 0.9 km.
-# Ring radius ≈ k × 0.9 km, so ring-1 ≈ 0.9 km (primary), ring-2 ≈ 1.8 km (fallback).
-H3_RESOLUTION:         int   = int(os.getenv("H3_RESOLUTION", 8))
-TRUCK_NEARBY_RING:     int   = 1   # ~0.9 km at resolution 8
-TRUCK_FALLBACK_RING:   int   = 2   # ~1.8 km at resolution 8
+# TRD v1.1: H3 resolution 9 with ring-2 as primary candidate lookup
+# and ring-3 as fallback before manual dispatcher escalation.
+H3_RESOLUTION:         int   = int(os.getenv("H3_RESOLUTION", 9))
+TRUCK_NEARBY_RING:     int   = int(os.getenv("TRUCK_NEARBY_RING", 2))
+TRUCK_FALLBACK_RING:   int   = int(os.getenv("TRUCK_FALLBACK_RING", 3))
 AVG_SPEED_KMH:         float = 25.0
 TRAFFIC_FACTOR:        float = 1.3
 

@@ -186,3 +186,14 @@ class User(SQLModel, table=True):
     role:            str           # dispatcher | driver | admin | manager
     truck_id:        Optional[int] = None
     waste_point_id:  Optional[int] = Field(default=None, foreign_key="waste_points.id")
+
+
+class RejectedSuggestion(SQLModel, table=True):
+    """Persisted rejection so the routing engine can suppress re-suggesting
+    the same hotspot+truck pair until the hotspot is resolved."""
+    __tablename__ = "rejected_suggestions"
+    id:          Optional[int] = Field(default=None, primary_key=True)
+    hotspot_id:  int           = Field(foreign_key="hotspots.id", index=True)
+    truck_id:    int           = Field(foreign_key="trucks.id")
+    rejected_at: datetime      = Field(default_factory=datetime.utcnow)
+

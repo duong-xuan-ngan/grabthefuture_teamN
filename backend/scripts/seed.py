@@ -63,11 +63,17 @@ WASTE_POINTS = [
     {"name": "Phú Nhuận Bin A",        "lat": 10.7981, "lng": 106.6810, "area_type": "street",      "category": BinCategory.small_residential,  "time": "07:00"},
     {"name": "Phú Nhuận Bin B",        "lat": 10.7984, "lng": 106.6813, "area_type": "street",      "category": BinCategory.small_residential,  "time": "07:00"},
     {"name": "Tân Phú Market Bin",     "lat": 10.7949, "lng": 106.6277, "area_type": "market",      "category": BinCategory.market_commercial,  "time": "06:00"},
+    # Additional points to reach 25
+    {"name": "Khu công nghệ cao A",    "lat": 10.8521, "lng": 106.7975, "area_type": "street",      "category": BinCategory.large_public,       "time": "06:30"},
+    {"name": "Khu công nghệ cao B",    "lat": 10.8530, "lng": 106.7980, "area_type": "street",      "category": BinCategory.large_public,       "time": "06:30"},
+    {"name": "Landmark 81 Park",       "lat": 10.7951, "lng": 106.7218, "area_type": "park",        "category": BinCategory.large_public,       "time": "08:00"},
+    {"name": "Thảo Điền Street Bin",   "lat": 10.8033, "lng": 106.7360, "area_type": "street",      "category": BinCategory.small_residential,  "time": "07:00"},
 ]
 
 TRUCKS = [
     {"id": 1, "name": "Truck Alpha · Hino 500", "lat": 10.7750, "lng": 106.6990, "max_capacity_kg": 3000.0, "current_load_kg": 840.0},
-    {"id": 2, "name": "Truck Beta · Hino 300",  "lat": 10.7760, "lng": 106.6530, "max_capacity_kg": 2500.0, "current_load_kg": 1950.0},
+    {"id": 2, "name": "Truck Beta · Hino 300",  "lat": 10.7760, "lng": 106.6530, "max_capacity_kg": 2500.0, "current_load_kg": 2350.0},  # Near capacity (94%)
+    {"id": 3, "name": "Truck Gamma · Hino 300", "lat": 10.7951, "lng": 106.7218, "max_capacity_kg": 2500.0, "current_load_kg": 0.0},
 ]
 
 # Zone centers covering the HCMC districts where waste points live. Each is a

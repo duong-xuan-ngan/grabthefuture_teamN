@@ -26,6 +26,14 @@ export function setToken(t) {
   try { t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY); } catch { /* ignore */ }
 }
 
+const TRUCK_ID_KEY = 'wh_truck_id';
+export function getTruckId() {
+  try { return localStorage.getItem(TRUCK_ID_KEY); } catch { return null; }
+}
+export function setTruckId(t) {
+  try { t ? localStorage.setItem(TRUCK_ID_KEY, t) : localStorage.removeItem(TRUCK_ID_KEY); } catch { /* ignore */ }
+}
+
 async function http(method, path, body, isForm = false) {
   const opts = { method, headers: {} };
   const token = getToken();
@@ -173,8 +181,9 @@ export function approveSuggestion(suggestionId, ctx) {
 }
 export function rejectSuggestion(suggestionId, ctx) {
   if (USE_MOCK) return mock.rejectSuggestion(suggestionId);
-  const hotspotId = ctx?.hotspot_id ?? String(suggestionId).replace(/^sg-/, '');
-  return http('POST', `/api/routing/reject/${hotspotId}`).then(() => ({ status: 'rejected' }));
+  const hotspotId = ctx.hotspot_id;
+  const truckId = ctx.truck_id;
+  return http('POST', `/api/routing/reject/${hotspotId}?truck_id=${truckId}`).then(() => ({ status: 'rejected' }));
 }
 
 // --------------------------------------------------------------------
@@ -338,6 +347,7 @@ export async function register(username, password, role = 'driver') {
   }
   const res = await http('POST', '/api/auth/register', { username, password, role });
   if (res?.token) setToken(res.token);
+  if (res?.truck_id) setTruckId(res.truck_id);
   return res;
 }
 
@@ -345,14 +355,17 @@ export async function login(username, password) {
   if (USE_MOCK) {
     const res = await mock.mockLogin(username, password);
     setToken(res.token);
+    if (res?.truck_id) setTruckId(res.truck_id);
     return res;
   }
   const res = await http('POST', '/api/auth/login', { username, password });
   if (res?.token) setToken(res.token);
+  if (res?.truck_id) setTruckId(res.truck_id);
   return res;
 }
 export function logout() {
   setToken(null);
+  setTruckId(null);
 }
 
 export const META = { BASE_URL, USE_MOCK };

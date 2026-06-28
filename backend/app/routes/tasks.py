@@ -26,15 +26,16 @@ def _ui_status(db_status: TaskStatus, is_first_assigned: bool) -> str:
     return db_status.value
 
 
-def _photo_count(hotspot_id: Optional[int], session: Session) -> int:
+def _photo_urls(hotspot_id: Optional[int], session: Session) -> list[str]:
     if hotspot_id is None:
-        return 0
-    return session.exec(
-        select(func.count(Report.id)).where(
+        return []
+    reports = session.exec(
+        select(Report).where(
             Report.hotspot_id == hotspot_id,
             Report.image_url.is_not(None),
         )
-    ).one()
+    ).all()
+    return [r.image_url for r in reports]
 
 
 def _resolve_wp(hotspot: Optional[Hotspot], session: Session) -> Optional[WastePoint]:
@@ -62,10 +63,11 @@ def get_driver_tasks(truck_id: int, session: Session = Depends(get_session)):
             first_assigned_seen = True
         out.append(task_view(
             t, hotspot, wp, truck,
-            _photo_count(t.hotspot_id, session),
+            _photo_urls(t.hotspot_id, session),
             sequence=i + 1,
             ui_status=_ui_status(t.status, is_first),
         ))
+
     return {"tasks": out}
 
 

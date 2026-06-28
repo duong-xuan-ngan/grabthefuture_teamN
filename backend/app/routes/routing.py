@@ -7,6 +7,7 @@ from sqlmodel import Session, select, delete
 from app.database import get_session
 from app.models import (
     Task, Hotspot, Truck, WastePoint, TaskStatus, HotspotStatus, RouteSegment,
+    RejectedSuggestion,
 )
 from app.services.routing import run_routing_engine
 from app.services.capacity import can_accept, remaining_kg
@@ -169,7 +170,18 @@ def approve_suggestion(
 
 
 @router.post("/reject/{hotspot_id}")
-def reject_suggestion(hotspot_id: int, session: Session = Depends(get_session)):
+def reject_suggestion(
+    hotspot_id: int,
+    truck_id: Optional[int] = None,
+    session: Session = Depends(get_session),
+):
     if not session.get(Hotspot, hotspot_id):
         raise HTTPException(status_code=404, detail="Hotspot not found")
-    return {"status": "rejected", "hotspot_id": hotspot_id}
+
+    if truck_id is not None:
+        rej = RejectedSuggestion(hotspot_id=hotspot_id, truck_id=truck_id)
+        session.add(rej)
+        session.commit()
+
+    return {"status": "rejected", "hotspot_id": hotspot_id, "truck_id": truck_id}
+
